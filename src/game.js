@@ -155,7 +155,7 @@ export default class Game {
 
     generateObject(pos){
         let idx = Math.floor(Math.random() * 5);
-        idx = 9;
+        
         return new OBJECT_TYPES[idx](this, pos);
     }
 
