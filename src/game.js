@@ -155,7 +155,7 @@ export default class Game {
 
     generateObject(pos){
         let idx = Math.floor(Math.random() * 5);
-
+        idx = 9;
         return new OBJECT_TYPES[idx](this, pos);
     }
 
@@ -243,12 +243,12 @@ export default class Game {
             })
 
             this.activeObjects.sort((a, b) =>{
-                return a.getPosY() > b.getPosY();
+                return a.getPosY() - b.getPosY();
             })
-
+            
             if(this.activeObjects.length > 0 &&
                 this.activeObjects[0].getPosY() <= this.gameOverY){
-
+                
                 if(!this.gameOverTimer){
                     this.gameOverTimer = 1000 * GAMEOVER_SECONDS;
                 }
