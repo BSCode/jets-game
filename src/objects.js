@@ -190,6 +190,21 @@ export class ObjectSize11 extends Object{
         this.animationFrame = 0;
     }
 
+    setupImg(id){
+        this.image = document.getElementById(id);
+
+        this.imgWidth = OBJ11_SPRITE_WIDTH;
+        this.imgHeight = OBJ11_SPRITE_HEIGHT;
+
+        this.spriteWidth = this.radius * 2;
+        this.spriteHeight = this.radius * 2;
+        this.spritePos = {
+            'x': this.pos.x - (this.spriteWidth * 0.5),
+            'y': this.pos.y - (this.spriteHeight * 0.5)
+        }
+        this.spriteAngle = 0;
+    }
+
     getSpriteCoords(){
         return {
             x: Math.floor(this.animationFrame % 5) * this.imgWidth,
@@ -208,7 +223,9 @@ export class ObjectSize11 extends Object{
         context.stroke();
 
         // draw sprite
-        let spriteSheetCoords = this.getSpriteCoords()
+        let spriteSheetCoords = this.getSpriteCoords();
+
+        console.log
 
         context.save();
         context.translate(this.spritePos.x + this.spriteWidth / 2, this.spritePos.y + this.spriteHeight / 2);
