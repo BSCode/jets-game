@@ -72,7 +72,7 @@ export default class Player {
     update(){
         this.pos.x = Math.min(
             this.moveConstraint[1],
-            Math.max(this.game.getMouse().x, this.moveConstraint[0])
+            Math.max(this.game.getInputPos().x, this.moveConstraint[0])
         );
 
         this.spritePos.x = this.pos.x - this.spriteWidth * 0.5 + SPRITE_OFFSET_X;

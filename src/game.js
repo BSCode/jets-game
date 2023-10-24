@@ -49,10 +49,12 @@ export default class Game {
         this.currentObject;
         this.nextObject;
 
-        this.mouse = {
+        this.inputPos = {
             x: this.width * 0.5,
             y: this.height * 0.5
         }
+
+        this.touch = null;
 
         this.dropObject = false;
         this.dropTimer = 0;
@@ -61,7 +63,9 @@ export default class Game {
     // accessors
     getWidth(){ return this.width; }
     getHeight(){ return this.height; }
-    getMouse(){ return this.mouse; }
+    getInputPos(){
+        return this.inputPos;
+    }
     getPlayerPos(){ return this.player.getPos(); }
     getContainerRightEdge(){ return this.container.getRightEdge(); }
     getLargestObject(){ return this.largestObject; }
@@ -81,12 +85,41 @@ export default class Game {
     init(){
         // setup eventListeners
         this.canvas.addEventListener('mousedown', (e) => {
-            this.dropObject = true;
+            if(!this.touch){
+                this.dropObject = true;
+            }
         })
 
         this.canvas.addEventListener('mousemove', (e) => {
-           this.mouse.x = e.offsetX;
-           this.mouse.y = e.offsetY;
+           this.inputPos.x = e.offsetX;
+           this.inputPos.y = e.offsetY;
+        })
+
+        this.canvas.addEventListener('touchstart', (e) => {
+            if(!this.touch){
+                this.touch = e.changedTouches[0].identifier;
+                
+                this.inputPos.x = e.changedTouches[0].pageX;
+                this.inputPos.y = e.changedTouches[0].pageY;
+            }
+        })
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            for(let i = 0; i < e.changedTouches.length; ++i){
+                if(e.changedTouches[i].identifier == this.touch){
+                    this.inputPos.x = e.changedTouches[i].pageX;
+                    this.inputPos.y = e.changedTouches[i].pageY;
+                }
+            }
+        })
+
+        this.canvas.addEventListener('touchend', (e) => {
+            for(let i = 0; i < e.changedTouches.length; ++i){
+                if(e.changedTouches[i].identifier == this.touch){
+                    this.dropObject = true;
+                    this.touch = null;
+                }
+            }
         })
 
         document.addEventListener('keydown', (e) => {
