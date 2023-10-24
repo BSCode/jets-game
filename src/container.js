@@ -4,7 +4,7 @@ const CONTAINER_WIDTH = 450;
 const CONTAINER_HEIGHT = 500;
 const CONTAINER_MATERIAL_WIDTH = 20;
 const CONTAINER_HEIGHT_SHIFT = 50;
-const CONTAINER_FRICTION = 1;
+const CONTAINER_FRICTION = 0.4;
 
 export default class Container {
     constructor(game){
