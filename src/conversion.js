@@ -1,4 +1,4 @@
-const PIXEL_SCALE = 500;
+const PIXEL_SCALE = 100;
 
 export function canvasToPhys(canvasPos, width, height){
     return planck.Vec2(

@@ -16,7 +16,11 @@ const OBJ_SIZES = [
     84,
     96,
     124
-]
+];
+
+const OBJ_DENSITY = 1.3;
+const OBJ_FRICTION = 0.5;
+const OBJ_RESTITUTION = 0.1;
 
 class Object{
     constructor(game, radius, pos){
@@ -24,7 +28,7 @@ class Object{
         this.radius = radius;
         this.pos = pos;
 
-        this.nextSize = OBJ_SIZES.indexOf(this.radius) + 1;
+        this.size = OBJ_SIZES.indexOf(this.radius);
 
         this.body = null;
 
@@ -46,7 +50,7 @@ class Object{
 
     getPosY(){ return this.pos.y; }
     getRadius(){ return this.radius; }
-    getNextSize(){ return this.nextSize; }
+    getNextSize(){ return this.size + 1; }
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
     isMarkedForDelete(){ return this.markedForDelete; }
 
@@ -79,13 +83,15 @@ class Object{
         this.body = this.game.createBody({
             type: 'dynamic',
             position: canvasToPhys(this.pos, this.game.width, this.game.height),
+            allowSleep: false,
             userData: {gameObj: this}
         });
 
         this.body.createFixture({
             shape: planck.Circle(radToPhys(this.radius)),
-            density: 0.1,
-            friction: 1
+            density: OBJ_DENSITY,
+            friction: OBJ_FRICTION,
+            restitution: OBJ_RESTITUTION
         });
     }
 
@@ -185,7 +191,7 @@ export class ObjectSize11 extends Object{
     constructor(game, pos){
         super(game,OBJ_SIZES[10], pos);
         this.setupImg('obj11');
-        this.nextSize = null;
+        this.size = null;
 
         this.animationFrame = 0;
     }

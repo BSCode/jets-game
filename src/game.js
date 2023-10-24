@@ -4,7 +4,7 @@ import Player from './player.js'
 import * as obj from './objects.js'
 import { canvasToPhys, physToCanvas } from './conversion.js';
 
-const GRAVITY = planck.Vec2(0, -5);
+const GRAVITY = planck.Vec2(0, -10);
 const MOVE_CONSTRAINT_BUFFER = 5;
 const DROP_DELAY = 20;
 const GAMEOVER_SECONDS = 5;
