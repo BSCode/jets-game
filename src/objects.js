@@ -18,8 +18,8 @@ const OBJ_SIZES = [
     124
 ];
 
-const OBJ_DENSITY = 1.3;
-const OBJ_FRICTION = 0.5;
+const OBJ_DENSITY = 4;
+const OBJ_FRICTION = 0.4;
 const OBJ_RESTITUTION = 0.1;
 
 class Object{
