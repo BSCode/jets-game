@@ -41,6 +41,8 @@ export default class Game {
         this.largestObject = 4;
 
         this.gameOverY = this.container.getTopEdge();
+        this.gameOverX = [this.container.getLeftEdge(), this.container.getRightEdge()]
+        this.objOOB = false;
         this.gameOverTimer = null;
         this.gameOver = false;
 
@@ -238,24 +240,29 @@ export default class Game {
 
             this.currentObject.update()
             this.nextObject.update()
+
+            this.objOOB = false;
             this.activeObjects.forEach( (o) => {
                 o.update();
-            })
 
-            this.activeObjects.sort((a, b) =>{
-                return a.getPosY() - b.getPosY();
+                let objPos = o.getPos();
+
+                if (objPos.y <= this.gameOverY ||
+                     objPos.x <= this.gameOverX[0] ||
+                      objPos.x >= this.gameOverX[1]){
+                    
+                    this.objOOB = true;
+                }
             })
             
-            if(this.activeObjects.length > 0 &&
-                this.activeObjects[0].getPosY() <= this.gameOverY){
-                
+            if(this.objOOB){
                 if(!this.gameOverTimer){
                     this.gameOverTimer = 1000 * GAMEOVER_SECONDS;
                 }
                 else {
                     this.gameOverTimer -= dt;
                 }
-
+    
                 if(this.gameOverTimer <= 0){
                     this.gameOver = true;
                 }

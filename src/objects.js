@@ -48,7 +48,7 @@ class Object{
         this.spriteAngle = 0;
     }
 
-    getPosY(){ return this.pos.y; }
+    getPos(){ return this.pos; }
     getRadius(){ return this.radius; }
     getNextSize(){ return this.size + 1; }
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
