@@ -6,7 +6,7 @@ import { canvasToPhys, physToCanvas } from './conversion.js';
 
 const GRAVITY = planck.Vec2(0, -10);
 const MOVE_CONSTRAINT_BUFFER = 5;
-const DROP_DELAY = 20;
+const DROP_DELAY = 300;
 const GAMEOVER_SECONDS = 5;
 const OBJECT_TYPES = [
     obj.ObjectSize1,
@@ -227,7 +227,7 @@ export default class Game {
             this.player.update();
 
             if(this.dropTimer > 0){
-                this.dropTimer--;
+                this.dropTimer -= dt;
                 this.dropObject = false;
             }
             else if(this.dropObject){
