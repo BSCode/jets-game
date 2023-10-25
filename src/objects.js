@@ -50,7 +50,7 @@ class Object{
 
     getPos(){ return this.pos; }
     getRadius(){ return this.radius; }
-    getNextSize(){ return this.size + 1; }
+    getSize(){ return this.size; }
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
     isMarkedForDelete(){ return this.markedForDelete; }
 

@@ -115,8 +115,8 @@ export default class Game {
             const objB = contact.getFixtureB().getBody().getUserData().gameObj;
             const contactPoint = contact.getWorldManifold().points[0];
             
-            // check if objects are the same and not max size
-            if(objA.radius == objB.radius && !objA.isMaxRadius()){
+            // check if objects are the same
+            if(objA.radius == objB.radius){
                 // do nothing if either object is used for another contact
                 if(objA.isMarkedForDelete() || objB.isMarkedForDelete()){
                     return;
@@ -126,11 +126,18 @@ export default class Game {
                 objA.markForDelete();
                 objB.markForDelete();
 
-                // queue up a new object
-                this.objsToCreate.push({
-                    size: objA.getNextSize(),
-                    pos: physToCanvas(contactPoint, this.width, this.height)
-                })
+                // add score
+                let nextSize = objA.getSize() + 1;
+
+                this.score += (Math.pow(nextSize, 2) + nextSize) / 2;
+
+                // queue up a new object if they were not max size
+                if(!objA.isMaxRadius()){
+                    this.objsToCreate.push({
+                        size: nextSize,
+                        pos: physToCanvas(contactPoint, this.width, this.height)
+                    })
+                }
                 
             }
         })
@@ -237,7 +244,6 @@ export default class Game {
                 if(o.size > this.largestObject){
                     this.largestObject = o.size;
                 }
-                this.score += (Math.pow(o.size, 2) + o.size) / 2;
             })
 
             this.objsToCreate.length = 0;
