@@ -56,6 +56,9 @@ export default class Game {
 
         this.dropObject = false;
         this.dropTimer = 0;
+
+        this.hidden = false;
+        this.skip = false;
     }
 
     // accessors
@@ -92,6 +95,17 @@ export default class Game {
         document.addEventListener('keydown', (e) => {
             if(e.key === 'r' || e.key === 'R'){
                 this.reset();
+            }
+        })
+
+        document.addEventListener('visibilitychange', () => {
+            console.log('visibility change', document.visibilityState)
+            if(document.visibilityState === 'hidden'){
+                this.hidden = true;
+                this.skip = true;
+            }
+            else{
+                this.hidden = false;
             }
         })
 
@@ -152,12 +166,11 @@ export default class Game {
         )
 
         this.nextObject = this.generateObject(this.ui.getNextObjPos());
-        
     }
 
     generateObject(pos){
         let idx = Math.floor(Math.random() * 5);
-        
+
         return new OBJECT_TYPES[idx](this, pos);
     }
 
@@ -200,7 +213,10 @@ export default class Game {
     }
 
     update(dt){
-        if(!this.gameOver){
+        if(!this.gameOver && !this.skip){
+            // console.log(dt);
+
+            // physics step
             this.world.step(dt / 1000);
 
             // remove colliided objects
@@ -270,6 +286,10 @@ export default class Game {
             else{
                 this.gameOverTimer = null;
             }
+        }
+        else if(!this.hidden){
+            this.skip = false;
+            console.log('skipped first');
         }
     }
 }
