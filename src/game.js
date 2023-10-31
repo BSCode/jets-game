@@ -68,9 +68,7 @@ export default class Game {
     // accessors
     getWidth(){ return this.width; }
     getHeight(){ return this.height; }
-    getInputPos(){
-        return this.inputPos;
-    }
+    getInputPos(){ return this.inputPos; }
     getPlayerPos(){ return this.player.getPos(); }
     getContainerRightEdge(){ return this.container.getRightEdge(); }
     getLargestObject(){ return this.largestObject; }
@@ -87,6 +85,7 @@ export default class Game {
         this.world.destroyBody(body);
     }
 
+    // utility
     init(){
         this.world = planck.World(GRAVITY);
         this.container.createBody();
@@ -131,6 +130,7 @@ export default class Game {
             }
         })
 
+        // reset button
         document.addEventListener('keydown', (e) => {
             if(e.key === 'r' || e.key === 'R'){
                 this.reset();
@@ -241,6 +241,30 @@ export default class Game {
         this.nextObject = this.generateObject(this.ui.getNextObjPos());
     }
 
+    checkOOB(obj){
+        let objPos = obj.getPos();
+
+        return objPos.y <= this.gameOverY || objPos.x <= this.gameOverX[0] || objPos.x >= this.gameOverX[1];    }
+
+    checkGameOver(dt) {        
+        if(this.objOOB){
+            if(!this.gameOverTimer){
+                this.gameOverTimer = 1000 * GAMEOVER_SECONDS;
+            }
+            else {
+                this.gameOverTimer -= dt;
+            }
+
+            if(this.gameOverTimer <= 0){
+                this.gameOver = true;
+            }
+        }
+        else{
+            this.gameOverTimer = null;
+        }
+    }
+
+    // render
     render(context){
         // draw UI
         this.ui.draw(context);
@@ -263,6 +287,7 @@ export default class Game {
         }
     }
 
+    // update
     update(dt){
         if(!this.gameOver && !this.skip){
             // console.log(dt);
@@ -290,10 +315,13 @@ export default class Game {
                 }
             })
 
+            // reset list
             this.objsToCreate.length = 0;
 
+            // update player
             this.player.update();
 
+            // drop object
             if(this.dropTimer > 0){
                 this.dropTimer -= dt;
                 this.dropObject = false;
@@ -304,38 +332,23 @@ export default class Game {
                 this.dropTimer = DROP_DELAY;
             }
 
-            this.currentObject.update()
-            this.nextObject.update()
-
+            // update active objects
             this.objOOB = false;
             this.activeObjects.forEach( (o) => {
                 o.update();
 
-                let objPos = o.getPos();
-
-                if (objPos.y <= this.gameOverY ||
-                     objPos.x <= this.gameOverX[0] ||
-                      objPos.x >= this.gameOverX[1]){
-                    
+                // check out of bounds
+                if(this.checkOOB(o)){
                     this.objOOB = true;
                 }
             })
             
-            if(this.objOOB){
-                if(!this.gameOverTimer){
-                    this.gameOverTimer = 1000 * GAMEOVER_SECONDS;
-                }
-                else {
-                    this.gameOverTimer -= dt;
-                }
-    
-                if(this.gameOverTimer <= 0){
-                    this.gameOver = true;
-                }
-            }
-            else{
-                this.gameOverTimer = null;
-            }
+            // update inactive objects
+            this.currentObject.update();
+            this.nextObject.update();
+
+            // check game over
+            this.checkGameOver(dt);
         }
         else if(!this.hidden){
             this.skip = false;

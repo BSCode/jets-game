@@ -24,44 +24,13 @@ export default class Container {
 
     }
 
-    getLeftEdge(){
-        return this.leftEdge;
-    }
+    // accessors
+    getLeftEdge(){ return this.leftEdge; }
+    getRightEdge(){ return this.rightEdge; }
+    getTopEdge(){ return this.topEdge; }
+    getBottomEdge(){ return this.bottomEdge; }
 
-    getRightEdge(){
-        return this.rightEdge;
-    }
-
-    getTopEdge(){
-        return this.topEdge;
-    }
-
-    getBottomEdge(){
-        return this.bottomEdge;
-    }
-
-    draw(context){
-
-        // left side
-        context.fillRect(
-            this.leftEdge - this.materialWidth, this.topEdge,
-            this.materialWidth, this.height
-        )
-
-        //right side
-        context.fillRect(
-            this.rightEdge, this.topEdge,
-            this.materialWidth, this.height
-        )
-
-        // bottom
-        context.fillRect(
-            this.leftEdge - this.materialWidth, this.bottomEdge,
-            this.width + (this.materialWidth * 2), this.materialWidth
-        )
-       
-    }
-
+    // mutators
     createBody(){
         let topLeft = {
             x: this.leftEdge,
@@ -109,5 +78,28 @@ export default class Container {
                    ),
             friction: CONTAINER_FRICTION
         })
+    }
+
+    // render
+    draw(context){
+
+        // left side
+        context.fillRect(
+            this.leftEdge - this.materialWidth, this.topEdge,
+            this.materialWidth, this.height
+        )
+
+        //right side
+        context.fillRect(
+            this.rightEdge, this.topEdge,
+            this.materialWidth, this.height
+        )
+
+        // bottom
+        context.fillRect(
+            this.leftEdge - this.materialWidth, this.bottomEdge,
+            this.width + (this.materialWidth * 2), this.materialWidth
+        )
+       
     }
 }

@@ -1,6 +1,6 @@
 import { OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, OBJ11_NUM_ANIM_FRAMES } from "./objects.js";
 
-const NEXT_OBJ_POS = {x: 1065, y: 195};
+const NEXT_OBJ_POS = {x: 1065, y: 196};
 const SCORE_POS = {x: 198, y: 345};
 const OBJ_CIRCLE_CENTER = {x: 1064 , y: 492};
 const OBJ_CIRCLE_RADIUS = 106;
@@ -22,10 +22,10 @@ export default class UI{
         this.gameOverImg = document.getElementById("gameover");
     }
 
-    getNextObjPos(){
-        return NEXT_OBJ_POS;
-    }
+    // accessors
+    getNextObjPos(){ return NEXT_OBJ_POS; }
 
+    // utility
     makeObjCircle(){
         for(let i = 0; i < 11; ++i){
             let angle = 2 * Math.PI * ((i + 1) / 12) - (Math.PI / 2);
@@ -44,6 +44,7 @@ export default class UI{
 
     }
 
+    // render
     draw(context){
         context.drawImage(
             this.uiImg,

@@ -26,24 +26,14 @@ export default class Player {
     }
 
     // accessors
-    getPos(){
-        return this.pos;
-    }
+    getPos(){ return this.pos; }
 
     // mutators
-    setPos(newPos){
-        this.pos = newPos;
-    }
-    
-    setMoveConstraint(left, right){
-        this.moveConstraint=[left, right];
-    }
+    setPos(newPos){ this.pos = newPos; }
+    setMoveConstraint(left, right){ this.moveConstraint=[left, right]; }
+    setAimTarget(val){ this.aimTarget = val; }
 
-    setAimTarget(val){
-        this.aimTarget = val;
-    }
-
-    
+    // render
     draw(context){
         if(!this.game.isGameOver()){
 
@@ -69,6 +59,7 @@ export default class Player {
         }
     }
 
+    // update
     update(){
         this.pos.x = Math.min(
             this.moveConstraint[1],

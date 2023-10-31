@@ -48,36 +48,16 @@ class Object{
         this.spriteAngle = 0;
     }
 
+    // accessors
     getPos(){ return this.pos; }
     getRadius(){ return this.radius; }
     getSize(){ return this.size; }
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
     isMarkedForDelete(){ return this.markedForDelete; }
 
+    // mutators
     setFollowPlayer(){ this.followPlayer = true; }
     markForDelete(){ this.markedForDelete = true; }
-
-    draw(context){
-        // draw bubble
-        context.beginPath();
-        context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
-        context.save();
-        context.globalAlpha = 0.5;
-        context.fill();
-        context.restore();
-        context.stroke();
-
-        // draw sprite
-        context.save();
-        context.translate(this.spritePos.x + this.spriteWidth / 2, this.spritePos.y + this.spriteHeight / 2);
-        context.rotate(this.spriteAngle);
-        context.drawImage(
-            this.image,
-            -this.spriteWidth / 2, -this.spriteHeight / 2,
-            this.spriteWidth, this.spriteHeight
-        );
-        context.restore();
-    }
 
     createBody(){
         this.body = this.game.createBody({
@@ -100,6 +80,30 @@ class Object{
         this.body = null;
     }
 
+    // render
+    draw(context){
+        // draw bubble
+        context.beginPath();
+        context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
+        context.save();
+        context.globalAlpha = 0.5;
+        context.fill();
+        context.restore();
+        context.stroke();
+
+        // draw sprite
+        context.save();
+        context.translate(this.spritePos.x + this.spriteWidth / 2, this.spritePos.y + this.spriteHeight / 2);
+        context.rotate(this.spriteAngle);
+        context.drawImage(
+            this.image,
+            -this.spriteWidth / 2, -this.spriteHeight / 2,
+            this.spriteWidth, this.spriteHeight
+        );
+        context.restore();
+    }
+
+    // update
     update(){
         if (this.body){
             this.pos = physToCanvas(this.body.getPosition(), this.game.getWidth(), this.game.getHeight());
