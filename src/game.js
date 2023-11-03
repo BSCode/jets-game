@@ -5,6 +5,8 @@ import * as obj from './objects.js'
 import { canvasToPhys, physToCanvas } from './conversion.js';
 
 const GRAVITY = planck.Vec2(0, -10);
+const PHYSICS_DT = 1000 / 240;
+const ANIMATION_DT = 1000 / 30;
 const MOVE_CONSTRAINT_BUFFER = 5;
 const DROP_DELAY = 400;
 const GAMEOVER_SECONDS = 5;
@@ -32,7 +34,9 @@ export default class Game {
         this.container = new Container(this);
         this.player = new Player(this);
         
-        this.world = null;
+        this.world = planck.World(GRAVITY);
+        this.physAccumulator = 0;
+        this.animAccumulator = 0;
 
         this.score = 0;
 
@@ -42,7 +46,7 @@ export default class Game {
 
         this.gameOverY = this.container.getTopEdge();
         this.gameOverX = [this.container.getLeftEdge(), this.container.getRightEdge()]
-        this.objOOB = false;
+
         this.gameOverTimer = null;
         this.gameOver = false;
 
@@ -87,7 +91,6 @@ export default class Game {
 
     // utility
     init(){
-        this.world = planck.World(GRAVITY);
         this.container.createBody();
         this.player.setAimTarget(this.container.getBottomEdge());
 
@@ -241,18 +244,26 @@ export default class Game {
         this.nextObject = this.generateObject(this.ui.getNextObjPos());
     }
 
-    checkOOB(obj){
+    checkOutOfBounds(obj){
         let objPos = obj.getPos();
 
-        return objPos.y <= this.gameOverY || objPos.x <= this.gameOverX[0] || objPos.x >= this.gameOverX[1];    }
+        return objPos.y <= this.gameOverY || objPos.x <= this.gameOverX[0] || objPos.x >= this.gameOverX[1];
+    }
 
-    checkGameOver(dt) {        
-        if(this.objOOB){
+    checkGameOver(frameTime){
+        let outOfBounds = false;
+        this.activeObjects.forEach((obj) => {
+            if(this.checkOutOfBounds(obj)){
+                outOfBounds = true;
+            }
+        })
+
+        if(outOfBounds){
             if(!this.gameOverTimer){
                 this.gameOverTimer = 1000 * GAMEOVER_SECONDS;
             }
             else {
-                this.gameOverTimer -= dt;
+                this.gameOverTimer -= frameTime;
             }
 
             if(this.gameOverTimer <= 0){
@@ -288,42 +299,13 @@ export default class Game {
     }
 
     // update
-    update(dt){
-        if(!this.gameOver && !this.skip){
-            // console.log(dt);
-
-            // physics step
-            this.world.step(dt / 1000);
-
-            // remove colliided objects
-            this.activeObjects = this.activeObjects.filter((obj) => {
-                if(obj.isMarkedForDelete()){
-                    obj.destroyBody();
-                }
-
-                return !obj.isMarkedForDelete();
-            })
-
-            // create new objects
-            this.objsToCreate.forEach( (o) => {
-                let newObj = new OBJECT_TYPES[o.size](this, o.pos);
-                newObj.createBody();
-                this.activeObjects.push(newObj);
-
-                if(o.size > this.largestObject){
-                    this.largestObject = o.size;
-                }
-            })
-
-            // reset list
-            this.objsToCreate.length = 0;
-
-            // update player
-            this.player.update();
-
+    update(frameTime){
+        if(!this.gameOver && !this.skip && !isNaN(frameTime)){
+            this.physAccumulator += frameTime;
+            this.animAccumulator += frameTime;
             // drop object
             if(this.dropTimer > 0){
-                this.dropTimer -= dt;
+                this.dropTimer -= frameTime;
                 this.dropObject = false;
             }
             else if(this.dropObject){
@@ -332,23 +314,71 @@ export default class Game {
                 this.dropTimer = DROP_DELAY;
             }
 
-            // update active objects
-            this.objOOB = false;
-            this.activeObjects.forEach( (o) => {
-                o.update();
+            while(this.physAccumulator >= PHYSICS_DT){
+                // simulate
+                this.world.step(PHYSICS_DT / 1000);
+                this.physAccumulator -= PHYSICS_DT;
 
-                // check out of bounds
-                if(this.checkOOB(o)){
-                    this.objOOB = true;
+                // update objs
+                // remove colliided objects
+                this.activeObjects = this.activeObjects.filter((obj) => {
+                    if(obj.isMarkedForDelete()){
+                        obj.destroyBody();
+                    }
+
+                    return !obj.isMarkedForDelete();
+                })
+
+                // create new objects
+                this.objsToCreate.forEach( (o) => {
+                    let newObj = new OBJECT_TYPES[o.size](this, o.pos);
+                    newObj.createBody();
+                    this.activeObjects.push(newObj);
+
+                    if(o.size > this.largestObject){
+                        this.largestObject = o.size;
+                    }
+                })
+
+                // reset list
+                this.objsToCreate.length = 0;
+
+                // update active objects
+                this.activeObjects.forEach( (o) => {
+                    o.update();
+                })
+            }
+
+            // interpolate
+            this.activeObjects.forEach((o) => {
+                o.interpolate(this.physAccumulator / PHYSICS_DT);
+            })
+
+            // update animations
+            let numAnimFrames = Math.floor(this.animAccumulator / ANIMATION_DT);
+            this.animAccumulator -= ANIMATION_DT * numAnimFrames;
+
+            this.activeObjects.forEach((obj) => {
+                if(obj.isAnimated()){
+                    obj.updateAnimation(numAnimFrames);
                 }
             })
-            
+            if(this.currentObject.isAnimated()){
+                this.currentObject.updateAnimation(numAnimFrames);
+            }
+            if(this.nextObject.isAnimated()){
+                this.nextObject.updateAnimation(numAnimFrames);
+            }
+
+            // update player
+            this.player.update();
+   
             // update inactive objects
             this.currentObject.update();
             this.nextObject.update();
 
             // check game over
-            this.checkGameOver(dt);
+            this.checkGameOver(frameTime);
         }
         else if(!this.hidden){
             this.skip = false;

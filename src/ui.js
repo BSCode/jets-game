@@ -1,4 +1,4 @@
-import { OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, OBJ11_NUM_ANIM_FRAMES } from "./objects.js";
+import { OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, NUM_ANIM_FRAMES} from "./objects.js";
 
 const NEXT_OBJ_POS = {x: 1065, y: 196};
 const SCORE_POS = {x: 198, y: 345};
@@ -75,7 +75,7 @@ export default class UI{
                     obj.x, obj.y,
                     OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT
                 )
-                this.animationFrame = (this.animationFrame + 0.5) % OBJ11_NUM_ANIM_FRAMES;
+                this.animationFrame = (this.animationFrame + 0.5) % NUM_ANIM_FRAMES;
             }
 
         })

@@ -43,14 +43,16 @@ window.addEventListener('load', function(){
 
     let lastTime = 0;
     function animate(timeStamp){
-        let dt = timeStamp - lastTime;
+        let frameTime = timeStamp - lastTime;
         lastTime = timeStamp;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        game.render(ctx, dt);
-        game.update(dt);
 
-       requestAnimationFrame(animate);
+        game.update(frameTime);
+
+        game.render(ctx, frameTime);
+        
+        requestAnimationFrame(animate);
     }
 
     animate();

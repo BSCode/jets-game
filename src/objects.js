@@ -2,7 +2,7 @@ import { canvasToPhys, physToCanvas, radToPhys } from "./conversion.js";
 
 export const OBJ11_SPRITE_WIDTH = 186;
 export const OBJ11_SPRITE_HEIGHT = 186;
-export const OBJ11_NUM_ANIM_FRAMES = 30;
+export const NUM_ANIM_FRAMES = 30;
 
 const OBJ_SIZES = [
     14,
@@ -26,6 +26,7 @@ class Object{
     constructor(game, radius, pos){
         this.game = game;
         this.radius = radius;
+        this.lastPos = pos;
         this.pos = pos;
 
         this.size = OBJ_SIZES.indexOf(this.radius);
@@ -36,16 +37,23 @@ class Object{
         this.markedForDelete = false;
     }
 
-    setupImg(id){
+    setupImg(id, fullBubble = false, sprtWidth = null, sprtHeight = null, isAnim = false){
         this.image = document.getElementById(id);
 
-        this.spriteWidth = (this.radius - 1) * Math.sqrt(2);
-        this.spriteHeight = (this.radius - 1) * Math.sqrt(2);
-        this.spritePos = {
-            'x': this.pos.x - (this.spriteWidth * 0.5),
-            'y': this.pos.y - (this.spriteHeight * 0.5)
+        if(fullBubble){
+            this.renderWidth = this.radius * 2;
+            this.renderHeight = this.radius * 2;
         }
-        this.spriteAngle = 0;
+        else{
+            this.renderWidth = (this.radius - 1) * Math.sqrt(2);
+            this.renderHeight = (this.radius - 1) * Math.sqrt(2);
+        }
+
+        this.spriteWidth = sprtWidth ? sprtWidth : this.image.width;
+        this.spriteHeight = sprtHeight ? sprtHeight : this.image.height;
+
+        this.animated = isAnim;
+        this.animationFrame = 0;
     }
 
     // accessors
@@ -54,10 +62,12 @@ class Object{
     getSize(){ return this.size; }
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
     isMarkedForDelete(){ return this.markedForDelete; }
+    isAnimated(){ return this.animated; }
 
     // mutators
     setFollowPlayer(){ this.followPlayer = true; }
     markForDelete(){ this.markedForDelete = true; }
+    updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES}
 
     createBody(){
         this.body = this.game.createBody({
@@ -80,8 +90,28 @@ class Object{
         this.body = null;
     }
 
+    interpolate(alpha){
+        this.pos.x = this.pos.x * alpha + this.lastPos.x * (1 - alpha);
+        this.pos.y = this.pos.y * alpha + this.lastPos.y * (1 - alpha);
+    }
+
+    // utility 
+    getSpriteCoords(){
+        return {
+            x: Math.floor(this.animationFrame % 5) * this.spriteWidth,
+            y: Math.floor(this.animationFrame / 5) * this.spriteHeight
+        }
+    }
+
     // render
     draw(context){
+        let renderPos = {
+            'x': this.pos.x - (this.renderWidth * 0.5),
+            'y': this.pos.y - (this.renderHeight * 0.5)
+        }
+
+        let renderAngle = this.body ? -this.body.getAngle() : 0;
+
         // draw bubble
         context.beginPath();
         context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
@@ -93,31 +123,41 @@ class Object{
 
         // draw sprite
         context.save();
-        context.translate(this.spritePos.x + this.spriteWidth / 2, this.spritePos.y + this.spriteHeight / 2);
-        context.rotate(this.spriteAngle);
-        context.drawImage(
-            this.image,
-            -this.spriteWidth / 2, -this.spriteHeight / 2,
-            this.spriteWidth, this.spriteHeight
-        );
+        context.translate(renderPos.x + this.renderWidth / 2, renderPos.y + this.renderHeight / 2);
+        context.rotate(renderAngle);
+
+        if(this.animated){
+            let spriteSheetCoords = this.getSpriteCoords();
+
+            context.drawImage(
+                this.image,
+                spriteSheetCoords.x, spriteSheetCoords.y,
+                this.spriteWidth, this.spriteHeight,
+                -this.renderWidth / 2, -this.renderHeight / 2,
+                this.renderWidth, this.renderHeight
+            );
+        }
+        else{
+            context.drawImage(
+                this.image,
+                -this.renderWidth / 2, -this.renderHeight / 2,
+                this.renderWidth, this.renderHeight
+            );
+        }
+
         context.restore();
     }
 
     // update
     update(){
+        this.lastPos = this.pos;
+
         if (this.body){
             this.pos = physToCanvas(this.body.getPosition(), this.game.getWidth(), this.game.getHeight());
-            this.spriteAngle = -this.body.getAngle();
         }
         else if(this.followPlayer){
             this.pos = this.game.getPlayerPos();
         }
-
-        this.spritePos = {
-            'x': this.pos.x - (this.spriteWidth * 0.5),
-            'y': this.pos.y - (this.spriteHeight * 0.5)
-        }
-        
     }
 }
 
@@ -194,60 +234,6 @@ export class ObjectSize10 extends Object{
 export class ObjectSize11 extends Object{
     constructor(game, pos){
         super(game,OBJ_SIZES[10], pos);
-        this.setupImg('obj11');
-        this.size = null;
-
-        this.animationFrame = 0;
+        this.setupImg('obj11', true, OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, true);
     }
-
-    setupImg(id){
-        this.image = document.getElementById(id);
-
-        this.imgWidth = OBJ11_SPRITE_WIDTH;
-        this.imgHeight = OBJ11_SPRITE_HEIGHT;
-
-        this.spriteWidth = this.radius * 2;
-        this.spriteHeight = this.radius * 2;
-        this.spritePos = {
-            'x': this.pos.x - (this.spriteWidth * 0.5),
-            'y': this.pos.y - (this.spriteHeight * 0.5)
-        }
-        this.spriteAngle = 0;
-    }
-
-    getSpriteCoords(){
-        return {
-            x: Math.floor(this.animationFrame % 5) * this.imgWidth,
-            y: Math.floor(this.animationFrame / 5) * this.imgHeight
-        }
-    }
-
-    draw(context){
-        // draw bubble
-        context.beginPath();
-        context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
-        context.save();
-        context.globalAlpha = 0.5;
-        context.fill();
-        context.restore();
-        context.stroke();
-
-        // draw sprite
-        let spriteSheetCoords = this.getSpriteCoords();
-
-        context.save();
-        context.translate(this.spritePos.x + this.spriteWidth / 2, this.spritePos.y + this.spriteHeight / 2);
-        context.rotate(this.spriteAngle);
-        context.drawImage(
-            this.image,
-            spriteSheetCoords.x, spriteSheetCoords.y,
-            this.imgWidth, this.imgHeight,
-            -this.spriteWidth / 2, -this.spriteHeight / 2,
-            this.spriteWidth, this.spriteHeight
-        );
-        context.restore();
-
-        this.animationFrame = (this.animationFrame + 0.5) % OBJ11_NUM_ANIM_FRAMES;
-    }
-
 }
