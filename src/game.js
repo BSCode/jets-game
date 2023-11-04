@@ -32,7 +32,7 @@ export default class Game {
         this.container = new Container(this);
         this.player = new Player(this);
         
-        this.world = planck.World(GRAVITY);
+        this.world = null;
 
         this.score = 0;
 
@@ -50,9 +50,11 @@ export default class Game {
         this.nextObject;
 
         this.inputPos = {
-            x: this.width * 0.5,
-            y: this.height * 0.5
+            x: this.canvas.width * 0.5,
+            y: this.canvas.height * 0.5
         }
+        this.inputWidthScale = 1;
+        this.inputHeightScale = 1;
 
         this.touch = null;
 
@@ -86,42 +88,45 @@ export default class Game {
     }
 
     init(){
+        this.world = planck.World(GRAVITY);
+        this.container.createBody();
+        this.player.setAimTarget(this.container.getBottomEdge());
+
+        const rect = this.canvas.getBoundingClientRect();
+
+        this.inputWidthScale = rect.width / this.width;
+        this.inputHeightScale = rect.height / this.height;
+
         // setup eventListeners
-        this.canvas.addEventListener('mousedown', (e) => {
-            if(!this.touch){
+        this.canvas.addEventListener('pointermove', (e) => {
+            if(!this.touch || e.pointerId == this.touch){
+                this.inputPos.x = e.offsetX / this.inputWidthScale;
+                this.inputPos.y = e.offsetY / this.inputHeightScale;
+            }
+        })
+
+        this.canvas.addEventListener('pointerdown', (e) => {
+            if(e.pointerType == 'touch' && !this.touch){
+                console.log("touch start")
+                this.touch = e.pointerId;
+                this.inputPos.x = e.offsetX / this.inputWidthScale;
+                this.inputPos.y = e.offsetY / this.inputHeightScale;
+            }
+            else{
                 this.dropObject = true;
             }
         })
 
-        this.canvas.addEventListener('mousemove', (e) => {
-           this.inputPos.x = e.offsetX;
-           this.inputPos.y = e.offsetY;
-        })
-
-        this.canvas.addEventListener('touchstart', (e) => {
-            if(!this.touch){
-                this.touch = e.changedTouches[0].identifier;
-                
-                this.inputPos.x = e.changedTouches[0].pageX;
-                this.inputPos.y = e.changedTouches[0].pageY;
+        this.canvas.addEventListener('pointerup', (e) => {
+            if(this.touch && e.pointerId == this.touch){
+                this.dropObject = true;
+                this.touch = null;
             }
         })
 
-        this.canvas.addEventListener('touchmove', (e) => {
-            for(let i = 0; i < e.changedTouches.length; ++i){
-                if(e.changedTouches[i].identifier == this.touch){
-                    this.inputPos.x = e.changedTouches[i].pageX;
-                    this.inputPos.y = e.changedTouches[i].pageY;
-                }
-            }
-        })
-
-        this.canvas.addEventListener('touchend', (e) => {
-            for(let i = 0; i < e.changedTouches.length; ++i){
-                if(e.changedTouches[i].identifier == this.touch){
-                    this.dropObject = true;
-                    this.touch = null;
-                }
+        this.canvas.addEventListener('pointercancel', (e) => {
+            if(this.touch){
+                this.touch = null;
             }
         })
 
@@ -131,8 +136,17 @@ export default class Game {
             }
         })
 
+        this.canvasObserver = new ResizeObserver(() => {
+            const rect = this.canvas.getBoundingClientRect();
+
+            this.inputWidthScale = rect.width / this.width;
+            this.inputHeightScale = rect.height / this.height;
+        })
+
+        this.canvasObserver.observe(this.canvas);
+
         document.addEventListener('visibilitychange', () => {
-            console.log('visibility change', document.visibilityState)
+            console.log('visibility change', document.visibilityState);
             if(document.visibilityState === 'hidden'){
                 this.hidden = true;
                 this.skip = true;
@@ -171,12 +185,8 @@ export default class Game {
                         pos: physToCanvas(contactPoint, this.width, this.height)
                     })
                 }
-                
             }
         })
-
-        this.container.createBody();
-        this.player.setAimTarget(this.container.getBottomEdge());
 
         this.reset();
     }
