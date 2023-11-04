@@ -7,6 +7,12 @@ window.addEventListener('load', function(){
     canvas.width = 1280;
     canvas.height = 720;
 
+    const fsContainer = this.document.getElementById('fullscreen-container');
+    const fsBtn = this.document.getElementById('fullscreen-btn');
+    fsBtn.onclick = function(){
+        fsContainer.requestFullscreen();
+    }
+
     ctx.fillStyle = 'white';
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'white';
