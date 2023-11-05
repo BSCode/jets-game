@@ -16,12 +16,12 @@ window.addEventListener('load', function(){
 
     const tgBtn = this.document.getElementById('touch-guard-btn');
     tgBtn.onclick = function(){
-        if(canvas.style.touchAction === 'auto'){
-            canvas.style.touchAction = 'none';
+        if(fsContainer.style.touchAction === 'auto'){
+            fsContainer.style.touchAction = 'none';
             tgBtn.innerHTML = '<i class="fa fa-gamepad"></i> Browser Touch Control: OFF';
         }
         else{
-            canvas.style.touchAction = 'auto';
+            fsContainer.style.touchAction = 'auto';
             tgBtn.innerHTML = '<i class="fa fa-gamepad"></i> Browser Touch Control: ON';
         }
     }
