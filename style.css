@@ -26,12 +26,18 @@ body {
     object-fit: contain;
     max-width: 100%;
     max-height: 100%;
-    touch-action: none;
 }
 
 #fullscreen-btn{
     position: fixed;
     top: 2px;
+    right: 2px;
+    padding: 2px;
+}
+
+#touch-guard-btn{
+    position: fixed;
+    top: 32px;
     right: 2px;
     padding: 2px;
 }

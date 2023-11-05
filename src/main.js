@@ -8,9 +8,22 @@ window.addEventListener('load', function(){
     canvas.height = 720;
 
     const fsContainer = this.document.getElementById('fullscreen-container');
+
     const fsBtn = this.document.getElementById('fullscreen-btn');
     fsBtn.onclick = function(){
         fsContainer.requestFullscreen();
+    }
+
+    const tgBtn = this.document.getElementById('touch-guard-btn');
+    tgBtn.onclick = function(){
+        if(canvas.style.touchAction === 'auto'){
+            canvas.style.touchAction = 'none';
+            tgBtn.innerHTML = '<i class="fa fa-gamepad"></i> Browser Touch Control: OFF';
+        }
+        else{
+            canvas.style.touchAction = 'auto';
+            tgBtn.innerHTML = '<i class="fa fa-gamepad"></i> Browser Touch Control: ON';
+        }
     }
 
     ctx.fillStyle = 'white';
