@@ -107,7 +107,6 @@ export default class Game {
 
         this.canvas.addEventListener('pointerdown', (e) => {
             if(e.pointerType == 'touch' && !this.touch){
-                console.log("touch start")
                 this.touch = e.pointerId;
                 this.inputPos.x = e.offsetX / this.inputWidthScale;
                 this.inputPos.y = e.offsetY / this.inputHeightScale;
