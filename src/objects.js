@@ -39,8 +39,8 @@ class Object{
     setupImg(id){
         this.image = document.getElementById(id);
 
-        this.spriteWidth = this.radius * Math.sqrt(2);
-        this.spriteHeight = this.radius * Math.sqrt(2);
+        this.spriteWidth = (this.radius - 1) * Math.sqrt(2);
+        this.spriteHeight = (this.radius - 1) * Math.sqrt(2);
         this.spritePos = {
             'x': this.pos.x - (this.spriteWidth * 0.5),
             'y': this.pos.y - (this.spriteHeight * 0.5)
@@ -60,7 +60,7 @@ class Object{
     draw(context){
         // draw bubble
         context.beginPath();
-        context.arc(this.pos.x, this.pos.y, this.radius, 0, 2*Math.PI);
+        context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
         context.save();
         context.globalAlpha = 0.5;
         context.fill();
