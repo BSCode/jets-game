@@ -221,7 +221,7 @@ export class ObjectSize11 extends Object{
     draw(context){
         // draw bubble
         context.beginPath();
-        context.arc(this.pos.x, this.pos.y, this.radius, 0, 2*Math.PI);
+        context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
         context.save();
         context.globalAlpha = 0.5;
         context.fill();
@@ -230,8 +230,6 @@ export class ObjectSize11 extends Object{
 
         // draw sprite
         let spriteSheetCoords = this.getSpriteCoords();
-
-        console.log
 
         context.save();
         context.translate(this.spritePos.x + this.spriteWidth / 2, this.spritePos.y + this.spriteHeight / 2);
