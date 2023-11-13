@@ -28,14 +28,21 @@ body {
     max-height: 100%;
 }
 
-#fullscreen-btn{
+#reset-btn {
+    position:absolute;
+    right: 5%;
+    bottom: 50%;
+    padding: 2px;
+}
+
+#fullscreen-btn {
     position: fixed;
     top: 2px;
     right: 2px;
     padding: 2px;
 }
 
-#touch-guard-btn{
+#touch-guard-btn {
     position: fixed;
     top: 32px;
     right: 2px;
