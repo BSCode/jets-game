@@ -99,25 +99,27 @@ export default class Game {
 
         // setup eventListeners
         this.canvas.addEventListener('pointermove', (e) => {
-            if(!this.touch || e.pointerId == this.touch){
+            if(this.touch == null || e.pointerId == this.touch){
                 this.inputPos.x = e.offsetX / this.inputWidthScale;
                 this.inputPos.y = e.offsetY / this.inputHeightScale;
             }
         })
 
         this.canvas.addEventListener('pointerdown', (e) => {
-            if(e.pointerType == 'touch' && !this.touch){
-                this.touch = e.pointerId;
-                this.inputPos.x = e.offsetX / this.inputWidthScale;
-                this.inputPos.y = e.offsetY / this.inputHeightScale;
-            }
-            else{
-                this.dropObject = true;
+            if(this.touch == null){
+                if(e.pointerType == 'touch'){
+                    this.touch = e.pointerId;
+                    this.inputPos.x = e.offsetX / this.inputWidthScale;
+                    this.inputPos.y = e.offsetY / this.inputHeightScale;
+                }
+                else{
+                    this.dropObject = true;
+                }
             }
         })
 
         this.canvas.addEventListener('pointerup', (e) => {
-            if(this.touch && e.pointerId == this.touch){
+            if(this.touch != null && e.pointerId == this.touch){
                 this.dropObject = true;
                 this.touch = null;
             }
