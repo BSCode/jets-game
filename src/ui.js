@@ -25,7 +25,17 @@ export default class UI{
     // accessors
     getNextObjPos(){ return NEXT_OBJ_POS; }
 
+    // mutators
+    updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES }
+
     // utility
+    getSpriteSheetCoords(){
+        return {
+            x: Math.floor(this.animationFrame % 5) * OBJ11_SPRITE_WIDTH,
+            y: Math.floor(this.animationFrame / 5) * OBJ11_SPRITE_HEIGHT
+        }
+    }
+
     makeObjCircle(){
         for(let i = 0; i < 11; ++i){
             let angle = 2 * Math.PI * ((i + 1) / 12) - (Math.PI / 2);
@@ -68,14 +78,15 @@ export default class UI{
                 )
             }
             else{
+                let spriteSheetCoords = this.getSpriteSheetCoords();
+
                 context.drawImage(
                     obj.img,
-                    Math.floor(this.animationFrame % 5) * OBJ11_SPRITE_WIDTH, Math.floor(this.animationFrame / 5) * OBJ11_SPRITE_HEIGHT,
+                    spriteSheetCoords.x, spriteSheetCoords.y,
                     OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT,
                     obj.x, obj.y,
                     OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT
                 )
-                this.animationFrame = (this.animationFrame + 0.5) % NUM_ANIM_FRAMES;
             }
 
         })

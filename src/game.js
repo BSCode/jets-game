@@ -224,7 +224,7 @@ export default class Game {
 
     generateObject(pos){
         let idx = Math.floor(Math.random() * 5);
-
+        idx = 9
         return new OBJECT_TYPES[idx](this, pos);
     }
 
@@ -358,14 +358,18 @@ export default class Game {
             let numAnimFrames = Math.floor(this.animAccumulator / ANIMATION_DT);
             this.animAccumulator -= ANIMATION_DT * numAnimFrames;
 
+            this.ui.updateAnimation(numAnimFrames);
+
             this.activeObjects.forEach((obj) => {
                 if(obj.isAnimated()){
                     obj.updateAnimation(numAnimFrames);
                 }
             })
+
             if(this.currentObject.isAnimated()){
                 this.currentObject.updateAnimation(numAnimFrames);
             }
+
             if(this.nextObject.isAnimated()){
                 this.nextObject.updateAnimation(numAnimFrames);
             }

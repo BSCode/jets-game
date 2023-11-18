@@ -96,7 +96,7 @@ class Object{
     }
 
     // utility 
-    getSpriteCoords(){
+    getSpriteSheetCoords(){
         return {
             x: Math.floor(this.animationFrame % 5) * this.spriteWidth,
             y: Math.floor(this.animationFrame / 5) * this.spriteHeight
@@ -127,7 +127,7 @@ class Object{
         context.rotate(renderAngle);
 
         if(this.animated){
-            let spriteSheetCoords = this.getSpriteCoords();
+            let spriteSheetCoords = this.getSpriteSheetCoords();
 
             context.drawImage(
                 this.image,
