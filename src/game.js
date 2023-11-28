@@ -1,7 +1,7 @@
 import UI from './ui.js'
 import Container from './container.js'
 import Player from './player.js'
-import * as obj from './objects.js'
+import * as OBJ from './objects.js'
 import { canvasToPhys, physToCanvas } from './conversion.js';
 
 const GRAVITY = planck.Vec2(0, -10);
@@ -11,17 +11,17 @@ const MOVE_CONSTRAINT_BUFFER = 5;
 const DROP_DELAY = 400;
 const GAMEOVER_SECONDS = 5;
 const OBJECT_TYPES = [
-    obj.ObjectSize1,
-    obj.ObjectSize2,
-    obj.ObjectSize3,
-    obj.ObjectSize4,    
-    obj.ObjectSize5,
-    obj.ObjectSize6,
-    obj.ObjectSize7,
-    obj.ObjectSize8,
-    obj.ObjectSize9,
-    obj.ObjectSize10,
-    obj.ObjectSize11
+    OBJ.ObjectSize1,
+    OBJ.ObjectSize2,
+    OBJ.ObjectSize3,
+    OBJ.ObjectSize4,    
+    OBJ.ObjectSize5,
+    OBJ.ObjectSize6,
+    OBJ.ObjectSize7,
+    OBJ.ObjectSize8,
+    OBJ.ObjectSize9,
+    OBJ.ObjectSize10,
+    OBJ.ObjectSize11
 ]
 
 export default class Game {

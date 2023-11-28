@@ -205,35 +205,35 @@ export class ObjectSize6 extends Object{
 
 export class ObjectSize7 extends Object{
     constructor(game, pos){
-        super(game,OBJ_SIZES[6], pos);
+        super(game, OBJ_SIZES[6], pos);
         this.setupImg('obj7');
     }
 }
 
 export class ObjectSize8 extends Object{
     constructor(game, pos){
-        super(game,OBJ_SIZES[7], pos);
+        super(game, OBJ_SIZES[7], pos);
         this.setupImg('obj8');
     }
 }
 
 export class ObjectSize9 extends Object{
     constructor(game, pos){
-        super(game,OBJ_SIZES[8], pos);
+        super(game, OBJ_SIZES[8], pos);
         this.setupImg('obj9');
     }
 }
 
 export class ObjectSize10 extends Object{
     constructor(game, pos){
-        super(game,OBJ_SIZES[9], pos);
+        super(game, OBJ_SIZES[9], pos);
         this.setupImg('obj10');
     }
 }
 
 export class ObjectSize11 extends Object{
     constructor(game, pos){
-        super(game,OBJ_SIZES[10], pos);
+        super(game, OBJ_SIZES[10], pos);
         this.setupImg('obj11', true, OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, true);
     }
 }
