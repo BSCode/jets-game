@@ -6,7 +6,8 @@ import { canvasToPhys, physToCanvas } from './conversion.js';
 
 const GRAVITY = planck.Vec2(0, -10);
 const PHYSICS_DT = 1000 / 240;
-const ANIMATION_DT = 1000 / 30;
+const THIRTY_FPS_DT = 1000 / 30;
+const SIXTY_FPS_DT = 1000 / 60;
 const MOVE_CONSTRAINT_BUFFER = 5;
 const DROP_DELAY = 400;
 const GAMEOVER_SECONDS = 5;
@@ -37,10 +38,12 @@ export default class Game {
         this.world = planck.World(GRAVITY);
         this.physAccumulator = 0;
         this.animAccumulator = 0;
+        this.combAccumulator = 0;
 
         this.score = 0;
 
         this.activeObjects = [];
+        this.combiningObjects = [];
         this.objsToCreate = [];
         this.largestObject = 4;
 
@@ -173,9 +176,14 @@ export default class Game {
                     return;
                 }
 
+                let canvasPoint = physToCanvas(contactPoint, this.width, this.height);
+
                 // mark both for deletion
-                objA.markForDelete();
-                objB.markForDelete();
+                objA.startCombination(canvasPoint);
+                objB.startCombination(canvasPoint);
+
+                this.combiningObjects.push(objA);
+                this.combiningObjects.push(objB);
 
                 // add score
                 let nextSize = objA.getSize() + 1;
@@ -186,8 +194,8 @@ export default class Game {
                 if(!objA.isMaxRadius()){
                     this.objsToCreate.push({
                         size: nextSize,
-                        pos: physToCanvas(contactPoint, this.width, this.height)
-                    })
+                        pos: canvasPoint
+                    });
                 }
             }
         })
@@ -224,7 +232,7 @@ export default class Game {
 
     generateObject(pos){
         let idx = Math.floor(Math.random() * 5);
-        idx = 9
+        // idx = 9
         return new OBJECT_TYPES[idx](this, pos);
     }
 
@@ -291,6 +299,10 @@ export default class Game {
             obj.draw(context);
         })
 
+        this.combiningObjects.forEach(obj => {
+            obj.draw(context);
+        })
+
         // draw inactive objects
         if(!this.gameOver){
             this.currentObject.draw(context);
@@ -303,6 +315,8 @@ export default class Game {
         if(!this.gameOver && !this.skip && !isNaN(frameTime)){
             this.physAccumulator += frameTime;
             this.animAccumulator += frameTime;
+            this.combAccumulator += frameTime;
+
             // drop object
             if(this.dropTimer > 0){
                 this.dropTimer -= frameTime;
@@ -355,16 +369,18 @@ export default class Game {
             })
 
             // update animations
-            let numAnimFrames = Math.floor(this.animAccumulator / ANIMATION_DT);
-            this.animAccumulator -= ANIMATION_DT * numAnimFrames;
+            let numAnimFrames = Math.floor(this.animAccumulator / THIRTY_FPS_DT);
+            this.animAccumulator -= THIRTY_FPS_DT * numAnimFrames;
 
             this.ui.updateAnimation(numAnimFrames);
 
-            this.activeObjects.forEach((obj) => {
-                if(obj.isAnimated()){
-                    obj.updateAnimation(numAnimFrames);
-                }
-            })
+            if(numAnimFrames > 0){
+                this.activeObjects.forEach((obj) => {
+                    if(obj.isAnimated()){
+                        obj.updateAnimation(numAnimFrames);
+                    }
+                })
+            }
 
             if(this.currentObject.isAnimated()){
                 this.currentObject.updateAnimation(numAnimFrames);
@@ -373,6 +389,19 @@ export default class Game {
             if(this.nextObject.isAnimated()){
                 this.nextObject.updateAnimation(numAnimFrames);
             }
+
+            let numCombFrames = Math.floor(this.combAccumulator / SIXTY_FPS_DT);
+            this.combAccumulator -= SIXTY_FPS_DT * numCombFrames;
+
+            if(numCombFrames > 0){
+                this.combiningObjects.forEach((obj) => {
+                    obj.updateCombination(numCombFrames);
+                })
+            }
+
+            this.combiningObjects = this.combiningObjects.filter((obj) => {
+                return obj.isCombining();
+            })
 
             // update player
             this.player.update();

@@ -3,6 +3,7 @@ import { canvasToPhys, physToCanvas, radToPhys } from "./conversion.js";
 export const OBJ11_SPRITE_WIDTH = 186;
 export const OBJ11_SPRITE_HEIGHT = 186;
 export const NUM_ANIM_FRAMES = 30;
+const NUM_COMBINATION_FRAMES = 10;
 
 const OBJ_SIZES = [
     14,
@@ -34,7 +35,11 @@ class Object{
         this.body = null;
 
         this.followPlayer = false;
+        this.combining = false;
         this.markedForDelete = false;
+
+        this.combining = false;
+        this.combinationTarget = null;
     }
 
     setupImg(id, fullBubble = false, sprtWidth = null, sprtHeight = null, isAnim = false){
@@ -63,11 +68,36 @@ class Object{
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
     isMarkedForDelete(){ return this.markedForDelete; }
     isAnimated(){ return this.animated; }
+    isCombining(){ return this.combining; }
 
     // mutators
     setFollowPlayer(){ this.followPlayer = true; }
     markForDelete(){ this.markedForDelete = true; }
-    updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES}
+    updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES; }
+
+    startCombination(target){
+        this.combining = true;
+        this.markedForDelete = true;
+
+        this.combinationFrames = 0;
+
+        this.combinationDelta = {
+            dx: target.x - this.pos.x,
+            dy: target.y - this.pos.y
+        }
+    }
+
+    updateCombination(numFrames){
+        console.log("updateCombination")
+        this.pos.x += this.combinationDelta.dx * (1 / NUM_COMBINATION_FRAMES) * numFrames;
+        this.pos.y += this.combinationDelta.dy * (1 / NUM_COMBINATION_FRAMES) * numFrames;
+
+        this.combinationFrames += numFrames;
+
+        if(this.combinationFrames >= NUM_COMBINATION_FRAMES){
+            this.combining = false;
+        }
+    }
 
     createBody(){
         this.body = this.game.createBody({
