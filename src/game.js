@@ -172,7 +172,7 @@ export default class Game {
             // check if objects are the same
             if(objA.radius == objB.radius){
                 // do nothing if either object is used for another contact
-                if(objA.isMarkedForDelete() || objB.isMarkedForDelete()){
+                if(objA.isCombining() || objB.isCombining()){
                     return;
                 }
 
@@ -181,9 +181,6 @@ export default class Game {
                 // mark both for deletion
                 objA.startCombination(canvasPoint);
                 objB.startCombination(canvasPoint);
-
-                this.combiningObjects.push(objA);
-                this.combiningObjects.push(objB);
 
                 // add score
                 let nextSize = objA.getSize() + 1;
@@ -336,11 +333,12 @@ export default class Game {
                 // update objs
                 // remove colliided objects
                 this.activeObjects = this.activeObjects.filter((obj) => {
-                    if(obj.isMarkedForDelete()){
+                    if(obj.isCombining()){
                         obj.destroyBody();
+                        this.combiningObjects.push(obj);
                     }
 
-                    return !obj.isMarkedForDelete();
+                    return !obj.isCombining();
                 })
 
                 // create new objects

@@ -35,11 +35,10 @@ class Object{
         this.body = null;
 
         this.followPlayer = false;
-        this.combining = false;
-        this.markedForDelete = false;
 
         this.combining = false;
-        this.combinationTarget = null;
+        this.combinationDelta = null;
+        this.combinationFrames = 0;
     }
 
     setupImg(id, fullBubble = false, sprtWidth = null, sprtHeight = null, isAnim = false){
@@ -66,29 +65,23 @@ class Object{
     getRadius(){ return this.radius; }
     getSize(){ return this.size; }
     isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
-    isMarkedForDelete(){ return this.markedForDelete; }
     isAnimated(){ return this.animated; }
     isCombining(){ return this.combining; }
 
     // mutators
     setFollowPlayer(){ this.followPlayer = true; }
-    markForDelete(){ this.markedForDelete = true; }
     updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES; }
 
-    startCombination(target){
+    startCombination(targetPos){
         this.combining = true;
-        this.markedForDelete = true;
-
-        this.combinationFrames = 0;
 
         this.combinationDelta = {
-            dx: target.x - this.pos.x,
-            dy: target.y - this.pos.y
+            dx: targetPos.x - this.pos.x,
+            dy: targetPos.y - this.pos.y
         }
     }
 
     updateCombination(numFrames){
-        console.log("updateCombination")
         this.pos.x += this.combinationDelta.dx * (1 / NUM_COMBINATION_FRAMES) * numFrames;
         this.pos.y += this.combinationDelta.dy * (1 / NUM_COMBINATION_FRAMES) * numFrames;
 
