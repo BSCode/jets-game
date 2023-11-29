@@ -326,6 +326,12 @@ export default class Game {
                 this.dropTimer = DROP_DELAY;
             }
 
+            // remove objects that are done combining
+            this.combiningObjects = this.combiningObjects.filter((obj) => {
+                return obj.isCombining();
+            })
+
+            // physics loop
             while(this.physAccumulator >= PHYSICS_DT){
                 // simulate
                 this.world.step(PHYSICS_DT / 1000);
@@ -397,10 +403,6 @@ export default class Game {
                     obj.updateCombination(numCombFrames);
                 })
             }
-
-            this.combiningObjects = this.combiningObjects.filter((obj) => {
-                return obj.isCombining();
-            })
 
             // update player
             this.player.update();
