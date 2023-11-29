@@ -212,6 +212,7 @@ export default class Game {
             obj.destroyBody();
         })
         this.activeObjects = [];
+        this.combiningObjects = [];
 
         this.player.reset();
 
