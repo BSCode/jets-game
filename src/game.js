@@ -53,8 +53,11 @@ export default class Game {
         this.gameOverTimer = null;
         this.gameOver = false;
 
-        this.currentObject;
-        this.nextObject;
+        this.currentObject = null;
+        this.nextObject = null;
+
+        this.dropObject = false;
+        this.dropTimer = 0;
 
         this.inputPos = {
             x: this.canvas.width * 0.5,
@@ -64,9 +67,6 @@ export default class Game {
         this.inputHeightScale = 1;
 
         this.touch = null;
-
-        this.dropObject = false;
-        this.dropTimer = 0;
 
         this.hidden = false;
         this.skip = false;
@@ -206,6 +206,12 @@ export default class Game {
         this.gameOver = false;
         this.gameOverTimer = null;
         this.dropObject = false;
+        this.dropTimer = 0;
+
+        // reset accumulators
+        this.physAccumulator = 0;
+        this.animAccumulator = 0;
+        this.combAccumulator = 0;
 
         // remove all objects
         this.activeObjects.forEach((obj) => {
@@ -213,6 +219,7 @@ export default class Game {
         })
         this.activeObjects = [];
         this.combiningObjects = [];
+        this.objsToCreate = [];
 
         this.player.reset();
 
