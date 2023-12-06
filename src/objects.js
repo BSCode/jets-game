@@ -3,7 +3,7 @@ import { canvasToPhys, physToCanvas, radToPhys } from "./conversion.js";
 export const OBJ11_SPRITE_WIDTH = 186;
 export const OBJ11_SPRITE_HEIGHT = 186;
 export const NUM_ANIM_FRAMES = 30;
-const NUM_COMBINATION_FRAMES = 10;
+const NUM_COMBINATION_FRAMES = 8;
 
 const OBJ_SIZES = [
     14,

@@ -317,109 +317,115 @@ export default class Game {
 
     // update
     update(frameTime){
-        if(!this.gameOver && !this.skip && !isNaN(frameTime)){
+        if(!this.skip && !isNaN(frameTime)){
             this.physAccumulator += frameTime;
             this.animAccumulator += frameTime;
             this.combAccumulator += frameTime;
 
-            // drop object
-            if(this.dropTimer > 0){
-                this.dropTimer -= frameTime;
-                this.dropObject = false;
-            }
-            else if(this.dropObject){
-                this.drop();
-                this.dropObject = false;
-                this.dropTimer = DROP_DELAY;
-            }
+            // 30fps animation frames
+            let numAnimFrames = Math.floor(this.animAccumulator / THIRTY_FPS_DT);
+            this.animAccumulator -= THIRTY_FPS_DT * numAnimFrames;
+
+            // 60fps animation frames
+            let numCombFrames = Math.floor(this.combAccumulator / SIXTY_FPS_DT);
+            this.combAccumulator -= SIXTY_FPS_DT * numCombFrames;
 
             // remove objects that are done combining
             this.combiningObjects = this.combiningObjects.filter((obj) => {
                 return obj.isCombining();
             })
 
-            // physics loop
-            while(this.physAccumulator >= PHYSICS_DT){
-                // simulate
-                this.world.step(PHYSICS_DT / 1000);
-                this.physAccumulator -= PHYSICS_DT;
+            // game logic
+            if(!this.gameOver){
+                // drop object
+                if(this.dropTimer > 0){
+                    this.dropTimer -= frameTime;
+                    this.dropObject = false;
+                }
+                else if(this.dropObject){
+                    this.drop();
+                    this.dropObject = false;
+                    this.dropTimer = DROP_DELAY;
+                }
 
-                // update objs
-                // remove colliided objects
-                this.activeObjects = this.activeObjects.filter((obj) => {
-                    if(obj.isCombining()){
-                        obj.destroyBody();
-                        this.combiningObjects.push(obj);
-                    }
+                // physics loop
+                while(this.physAccumulator >= PHYSICS_DT){
+                    // simulate
+                    this.world.step(PHYSICS_DT / 1000);
+                    this.physAccumulator -= PHYSICS_DT;
 
-                    return !obj.isCombining();
+                    // update objs
+                    // remove colliided objects
+                    this.activeObjects = this.activeObjects.filter((obj) => {
+                        if(obj.isCombining()){
+                            obj.destroyBody();
+                            this.combiningObjects.push(obj);
+                        }
+
+                        return !obj.isCombining();
+                    })
+
+                    // create new objects
+                    this.objsToCreate.forEach( (o) => {
+                        let newObj = new OBJECT_TYPES[o.size](this, o.pos);
+                        newObj.createBody();
+                        this.activeObjects.push(newObj);
+
+                        if(o.size > this.largestObject){
+                            this.largestObject = o.size;
+                        }
+                    })
+
+                    // reset list
+                    this.objsToCreate.length = 0;
+
+                    // update active objects
+                    this.activeObjects.forEach( (o) => {
+                        o.update();
+                    })
+                }
+
+                // interpolate
+                this.activeObjects.forEach((o) => {
+                    o.interpolate(this.physAccumulator / PHYSICS_DT);
                 })
 
-                // create new objects
-                this.objsToCreate.forEach( (o) => {
-                    let newObj = new OBJECT_TYPES[o.size](this, o.pos);
-                    newObj.createBody();
-                    this.activeObjects.push(newObj);
+                // update animations
+                this.ui.updateAnimation(numAnimFrames);
 
-                    if(o.size > this.largestObject){
-                        this.largestObject = o.size;
-                    }
-                })
+                if(numAnimFrames > 0){
+                    this.activeObjects.forEach((obj) => {
+                        if(obj.isAnimated()){
+                            obj.updateAnimation(numAnimFrames);
+                        }
+                    })
+                }
 
-                // reset list
-                this.objsToCreate.length = 0;
+                if(this.currentObject.isAnimated()){
+                    this.currentObject.updateAnimation(numAnimFrames);
+                }
 
-                // update active objects
-                this.activeObjects.forEach( (o) => {
-                    o.update();
-                })
+                if(this.nextObject.isAnimated()){
+                    this.nextObject.updateAnimation(numAnimFrames);
+                }
+
+                // update player
+                this.player.update();
+    
+                // update inactive objects
+                this.currentObject.update();
+                this.nextObject.update();
+
+                // check game over
+                this.checkGameOver(frameTime);
             }
 
-            // interpolate
-            this.activeObjects.forEach((o) => {
-                o.interpolate(this.physAccumulator / PHYSICS_DT);
-            })
-
-            // update animations
-            let numAnimFrames = Math.floor(this.animAccumulator / THIRTY_FPS_DT);
-            this.animAccumulator -= THIRTY_FPS_DT * numAnimFrames;
-
-            this.ui.updateAnimation(numAnimFrames);
-
-            if(numAnimFrames > 0){
-                this.activeObjects.forEach((obj) => {
-                    if(obj.isAnimated()){
-                        obj.updateAnimation(numAnimFrames);
-                    }
-                })
-            }
-
-            if(this.currentObject.isAnimated()){
-                this.currentObject.updateAnimation(numAnimFrames);
-            }
-
-            if(this.nextObject.isAnimated()){
-                this.nextObject.updateAnimation(numAnimFrames);
-            }
-
-            let numCombFrames = Math.floor(this.combAccumulator / SIXTY_FPS_DT);
-            this.combAccumulator -= SIXTY_FPS_DT * numCombFrames;
-
+            // update combining objects regardless of gameover
             if(numCombFrames > 0){
                 this.combiningObjects.forEach((obj) => {
                     obj.updateCombination(numCombFrames);
                 })
             }
-
-            // update player
-            this.player.update();
-   
-            // update inactive objects
-            this.currentObject.update();
-            this.nextObject.update();
-
-            // check game over
-            this.checkGameOver(frameTime);
         }
         else if(!this.hidden){
             this.skip = false;
