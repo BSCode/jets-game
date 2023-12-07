@@ -179,7 +179,7 @@ class Object{
             this.pos = physToCanvas(this.body.getPosition(), this.game.getWidth(), this.game.getHeight());
         }
         else if(this.followPlayer){
-            this.pos = this.game.getPlayerPos();
+            this.pos = {...this.game.getPlayerPos()};
         }
     }
 }
