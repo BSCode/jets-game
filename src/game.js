@@ -1,139 +1,132 @@
-import UI from './ui.js'
-import Container from './container.js'
-import Player from './player.js'
-import * as OBJ from './objects.js'
+import UI from './ui.js';
+import Container from './container.js';
+import Player from './player.js';
+import { OBJECT_TYPES } from './objects.js';
 import { canvasToPhys, physToCanvas } from './conversion.js';
 
 const GRAVITY = planck.Vec2(0, -10);
-const PHYSICS_DT = 1000 / 240;
+const PHYSICS_DT = 1000 / 240;          // 240 hz
 const THIRTY_FPS_DT = 1000 / 30;
 const SIXTY_FPS_DT = 1000 / 60;
-const MOVE_CONSTRAINT_BUFFER = 5;
-const DROP_DELAY = 400;
+
+const DROP_DELAY_SECONDS = 0.5;
 const GAMEOVER_SECONDS = 5;
-const OBJECT_TYPES = [
-    OBJ.ObjectSize1,
-    OBJ.ObjectSize2,
-    OBJ.ObjectSize3,
-    OBJ.ObjectSize4,    
-    OBJ.ObjectSize5,
-    OBJ.ObjectSize6,
-    OBJ.ObjectSize7,
-    OBJ.ObjectSize8,
-    OBJ.ObjectSize9,
-    OBJ.ObjectSize10,
-    OBJ.ObjectSize11
-]
+
 
 export default class Game {
-    constructor(canvas){
-        this.canvas = canvas;
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+    // singleton tracker
+    static #instance;
 
-        this.ui = new UI(this);
-        this.container = new Container(this);
-        this.player = new Player(this);
-        
-        this.world = planck.World(GRAVITY);
-        this.physAccumulator = 0;
-        this.animAccumulator = 0;
-        this.combAccumulator = 0;
+    // canvas
+    #canvas;
+    #canvasObserver = new ResizeObserver(this.#setInputScaling);
 
-        this.score = 0;
+    // class instances
+    #ui = new UI(this);
+    #container = new Container(this);
+    #player = new Player(this);
 
-        this.activeObjects = [];
-        this.combiningObjects = [];
-        this.objsToCreate = [];
-        this.largestObject = 4;
+    // input values
+    #inputPos;                      // current input location: {x: val, y: val}
+    #inputWidthScale = 1;           // scaling input values to scaled canvas
+    #inputHeightScale = 1;
+    #touchID = null;                // touch ID to track first touch
 
-        this.gameOverY = this.container.getTopEdge();
-        this.gameOverX = [this.container.getLeftEdge(), this.container.getRightEdge()]
+    // physics and update loop
+    #world = planck.World(GRAVITY);
+    #physicsAccumulator = 0;        // accumulator for physics sim
+    #thirtyFPSAccumulator = 0;      // accumulator for 30 fps animations
+    #sixtyFPSAccumulator = 0;       // accumulator for 60 fps animations
 
-        this.gameOverTimer = null;
-        this.gameOver = false;
+    // object tracking
+    #currentObject = null;          // current object that will be dropped
+    #nextObject = null;             // next object that will be queued after drop
+    #activeObjects = [];            // list of active objects that have physics
+    #combiningObjects = [];         // list of objects in combining animation
+    #objectsToCreate = [];          // list of objects to be created after physics step
+    // TODO: MOVE TO UI CLASS
+    #largestObject = 4;             // largest object created for UI
 
-        this.currentObject = null;
-        this.nextObject = null;
+    // pause on hide and skip first frame
+    #hidden = false;                // track when tab is hidden and pause                
+    #skip = false;                  // skip frame after un-hide b/c large frame time
 
-        this.dropObject = false;
-        this.dropTimer = 0;
+    // game values
+    #score = 0;                     // current score
 
-        this.inputPos = {
-            x: this.canvas.width * 0.5,
-            y: this.canvas.height * 0.5
+    #tryDropObject = false;         // player tried to drop object this frame
+    #dropDelayTimer = 0;            // delay timer between dropping objects
+
+    #gameOver = false;              // track if gameover
+    #gameOverTimer = null;          // track if object is out of bounds too long
+
+    constructor(canvas) {
+        if(Game.#instance){
+            return Game.#instance;
         }
-        this.inputWidthScale = 1;
-        this.inputHeightScale = 1;
+        Game.#instance = this;
 
-        this.touch = null;
+        this.#canvas = canvas;
 
-        this.hidden = false;
-        this.skip = false;
+        this.#inputPos = {
+            x: this.#canvas.width * 0.5,
+            y: this.#canvas.height * 0.5
+        }
     }
 
     // accessors
-    getWidth(){ return this.width; }
-    getHeight(){ return this.height; }
-    getInputPos(){ return this.inputPos; }
-    getPlayerPos(){ return this.player.getPos(); }
-    getContainerRightEdge(){ return this.container.getRightEdge(); }
-    getLargestObject(){ return this.largestObject; }
-    getScore(){ return this.score; }
-    getGameOverY(){ return this.gameOverY; }
-    getGameOverTimer(){ return this.gameOverTimer; }
-    isGameOver() { return this.gameOver; }
+    get width() { return this.#canvas.width; }
+    get height() { return this.#canvas.height; }
+    get playerPos() { return this.#player.pos; }
+    get containerLeft() { return this.#container.leftEdge; }
+    get containerRight() { return this.#container.rightEdge; }
+    get containerTop() { return this.#container.topEdge; }
+    get containerBottom() { return this.#container.bottomEdge; }
+    get input() { return this.#inputPos; }
+    get largestObject() { return this.#largestObject; }
+    get score() { return this.#score; }
+    get gameOverTimer() { return this.#gameOverTimer; }
+    get isGameOver() { return this.#gameOver; }
     
-    // physics bodies
-    createBody(bodyDef){
-        return this.world.createBody(bodyDef);
-    }
-    destroyBody(body){
-        this.world.destroyBody(body);
-    }
+    // initialization
+    init() {
+        // create container phyics
+        this.#container.createBody();
 
-    // utility
-    init(){
-        this.container.createBody();
-        this.player.setAimTarget(this.container.getBottomEdge());
+        // input scaling
+        this.#setInputScaling();
+        this.#canvasObserver.observe(this.#canvas);
 
-        const rect = this.canvas.getBoundingClientRect();
-
-        this.inputWidthScale = rect.width / this.width;
-        this.inputHeightScale = rect.height / this.height;
-
-        // setup eventListeners
-        this.canvas.addEventListener('pointermove', (e) => {
-            if(this.touch == null || e.pointerId == this.touch){
-                this.inputPos.x = e.offsetX / this.inputWidthScale;
-                this.inputPos.y = e.offsetY / this.inputHeightScale;
+        // setup input eventListeners
+        this.#canvas.addEventListener('pointermove', (e) => {
+            if(this.#touchID == null || e.pointerId == this.#touchID){
+                this.#inputPos.x = e.offsetX / this.#inputWidthScale;
+                this.#inputPos.y = e.offsetY / this.#inputHeightScale;
             }
         })
 
-        this.canvas.addEventListener('pointerdown', (e) => {
-            if(this.touch == null){
+        this.#canvas.addEventListener('pointerdown', (e) => {
+            if(this.#touchID == null){
                 if(e.pointerType == 'touch'){
-                    this.touch = e.pointerId;
-                    this.inputPos.x = e.offsetX / this.inputWidthScale;
-                    this.inputPos.y = e.offsetY / this.inputHeightScale;
+                    this.#touchID = e.pointerId;
+                    this.#inputPos.x = e.offsetX / this.#inputWidthScale;
+                    this.#inputPos.y = e.offsetY / this.#inputHeightScale;
                 }
                 else{
-                    this.dropObject = true;
+                    this.#tryDropObject = true;
                 }
             }
         })
 
-        this.canvas.addEventListener('pointerup', (e) => {
-            if(this.touch != null && e.pointerId == this.touch){
-                this.dropObject = true;
-                this.touch = null;
+        this.#canvas.addEventListener('pointerup', (e) => {
+            if(this.#touchID != null && e.pointerId == this.#touchID){
+                this.#tryDropObject = true;
+                this.#touchID = null;
             }
         })
 
-        this.canvas.addEventListener('pointercancel', (e) => {
-            if(this.touch){
-                this.touch = null;
-            }
+        this.#canvas.addEventListener('pointercancel', (e) => {
+            this.#touchID = null;
         })
 
         // reset button
@@ -143,28 +136,19 @@ export default class Game {
             }
         })
 
-        this.canvasObserver = new ResizeObserver(() => {
-            const rect = this.canvas.getBoundingClientRect();
-
-            this.inputWidthScale = rect.width / this.width;
-            this.inputHeightScale = rect.height / this.height;
-        })
-
-        this.canvasObserver.observe(this.canvas);
-
         document.addEventListener('visibilitychange', () => {
             console.log('visibility change', document.visibilityState);
             if(document.visibilityState === 'hidden'){
-                this.hidden = true;
-                this.skip = true;
+                this.#hidden = true;
+                this.#skip = true;
             }
             else{
-                this.hidden = false;
+                this.#hidden = false;
             }
         })
 
         // collision event listener
-        this.world.on('begin-contact', (contact) => {
+        this.#world.on('begin-contact', (contact) => {
             const objA = contact.getFixtureA().getBody().getUserData().gameObj;
             const objB = contact.getFixtureB().getBody().getUserData().gameObj;
             const contactPoint = contact.getWorldManifold().points[0];
@@ -185,11 +169,11 @@ export default class Game {
                 // add score
                 let nextSize = objA.getSize() + 1;
 
-                this.score += (Math.pow(nextSize, 2) + nextSize) / 2;
+                this.#score += (Math.pow(nextSize, 2) + nextSize) / 2;
 
                 // queue up a new object if they were not max size
                 if(!objA.isMaxRadius()){
-                    this.objsToCreate.push({
+                    this.#objectsToCreate.push({
                         size: nextSize,
                         pos: canvasPoint
                     });
@@ -200,152 +184,174 @@ export default class Game {
         this.reset();
     }
 
-    reset(){
-        this.largestObject = 4;
-        this.score = 0;
-        this.gameOver = false;
-        this.gameOverTimer = null;
-        this.dropObject = false;
-        this.dropTimer = 0;
-
+    // reset game
+    reset() {
         // reset accumulators
-        this.physAccumulator = 0;
-        this.animAccumulator = 0;
-        this.combAccumulator = 0;
+        this.#physicsAccumulator = 0;
+        this.#thirtyFPSAccumulator = 0;
+        this.#sixtyFPSAccumulator = 0;
 
-        // remove all objects
-        this.activeObjects.forEach((obj) => {
+        // remove all existing objects
+        this.#activeObjects.forEach((obj) => {
             obj.destroyBody();
         })
-        this.activeObjects = [];
-        this.combiningObjects = [];
-        this.objsToCreate = [];
+        this.#activeObjects = [];
+        this.#combiningObjects = [];
+        this.#objectsToCreate = [];
 
-        this.player.reset();
+        this.#largestObject = 4;
 
-        //make first objects
-        this.currentObject = this.generateObject(this.player.getPos());
-        this.currentObject.setFollowPlayer(true);
+        // reset player
+        this.#player.reset();
 
-        this.player.setMoveConstraint(
-            this.container.getLeftEdge() + this.currentObject.getRadius() + MOVE_CONSTRAINT_BUFFER,
-            this.container.getRightEdge() - this.currentObject.getRadius() - MOVE_CONSTRAINT_BUFFER
-        )
+        // reset game values
+        this.#score = 0;
 
-        this.nextObject = this.generateObject(this.ui.getNextObjPos());
+        this.#tryDropObject = false;
+        this.#dropDelayTimer = 0;
+
+        this.#gameOver = false;
+        this.#gameOverTimer = null;
+
+        // make first objects
+        this.#currentObject = this.#generateObject(this.#player.pos);
+        this.#currentObject.followPlayer = true;
+        this.#player.setMoveConstraint(this.#currentObject.radius);
+
+        this.#nextObject = this.#generateObject(this.#ui.nextObjectPos);
     }
 
-    generateObject(pos){
+    // physics bodies
+    createBody(bodyDef) {
+        return this.#world.createBody(bodyDef);
+    }
+    destroyBody(body) {
+        this.#world.destroyBody(body);
+    }
+
+    // utility
+    #setInputScaling() {
+        // set input scaling based on canvas size
+        const rect = this.#canvas.getBoundingClientRect();
+
+        this.#inputWidthScale = rect.width / this.#canvas.width;
+        this.#inputHeightScale = rect.height / this.#canvas.height;
+    }
+
+    #generateObject(pos) {
         let idx = Math.floor(Math.random() * 5);
         // idx = 9
         return new OBJECT_TYPES[idx](this, pos);
     }
 
-    drop(){
-        this.activeObjects.push(this.currentObject);
-        this.currentObject.createBody();
-        this.currentObject.setFollowPlayer(false);
+    #dropObject() {
+        this.#activeObjects.push(this.#currentObject);
+        this.#currentObject.createBody();
+        this.#currentObject.followPlayer = false;
 
-        this.currentObject = this.nextObject;
-        this.currentObject.setFollowPlayer(true);
+        this.#currentObject = this.#nextObject;
+        this.#currentObject.followPlayer = true;
 
-        this.player.setMoveConstraint(
-            this.container.getLeftEdge() + this.currentObject.getRadius() + MOVE_CONSTRAINT_BUFFER,
-            this.container.getRightEdge() - this.currentObject.getRadius() - MOVE_CONSTRAINT_BUFFER
-        )
+        this.player.setMoveConstraint(this.#currentObject.radius)
 
-        this.nextObject = this.generateObject(this.ui.getNextObjPos());
+        this.nextObject = this.#generateObject(this.#ui.nextObjectPos);
     }
 
-    checkOutOfBounds(obj){
-        let objPos = obj.getPos();
-
-        return objPos.y <= this.gameOverY || objPos.x <= this.gameOverX[0] || objPos.x >= this.gameOverX[1];
+    #checkOutOfBounds(obj) {
+        return ( 
+            obj.pos.y <= this.containerTop ||
+            obj.pos.x <= this.containerLeft ||
+            obj.pos.x >= this.containerRight
+        );
     }
 
-    checkGameOver(frameTime){
+    #checkGameOver(frameTime) {
         let outOfBounds = false;
-        this.activeObjects.forEach((obj) => {
-            if(this.checkOutOfBounds(obj)){
+
+        this.#activeObjects.forEach((obj) => {
+            if(this.#checkOutOfBounds(obj)){
                 outOfBounds = true;
             }
         })
 
         if(outOfBounds){
-            if(!this.gameOverTimer){
-                this.gameOverTimer = 1000 * GAMEOVER_SECONDS;
+            if(this.#gameOverTimer == null){
+                this.#gameOverTimer = 1000 * GAMEOVER_SECONDS;
             }
             else {
-                this.gameOverTimer -= frameTime;
+                this.#gameOverTimer -= frameTime;
             }
 
-            if(this.gameOverTimer <= 0){
-                this.gameOver = true;
+            if(this.#gameOverTimer <= 0){
+                this.#gameOver = true;
             }
         }
         else{
-            this.gameOverTimer = null;
+            this.#gameOverTimer = null;
         }
-    }
+    }    
+
 
     // render
-    render(context){
+    render(context) {
         // draw UI
-        this.ui.draw(context);
+        this.#ui.draw(context);
 
         // draw player
-        this.player.draw(context);
+        this.#player.draw(context);
 
         // draw container
-        this.container.draw(context);
+        this.#container.draw(context);
 
         // draw active objects
-        this.activeObjects.forEach(obj => {
+        this.#activeObjects.forEach(obj => {
             obj.draw(context);
         })
 
-        this.combiningObjects.forEach(obj => {
+        this.#combiningObjects.forEach(obj => {
             obj.draw(context);
         })
 
         // draw inactive objects
-        if(!this.gameOver){
-            this.currentObject.draw(context);
-            this.nextObject.draw(context);
+        if(!this.#gameOver){
+            this.#currentObject.draw(context);
+            this.#nextObject.draw(context);
         }
     }
 
     // update
-    update(frameTime){
-        if(!this.skip && !isNaN(frameTime)){
-            this.physAccumulator += frameTime;
-            this.animAccumulator += frameTime;
-            this.combAccumulator += frameTime;
+    update(frameTime) {
+        if(!this.#skip && !isNaN(frameTime)){
+            // update accumulators
+            this.#physicsAccumulator += frameTime;
+            this.#thirtyFPSAccumulator += frameTime;
+            this.#sixtyFPSAccumulator += frameTime;
 
             // 30fps animation frames
-            let numAnimFrames = Math.floor(this.animAccumulator / THIRTY_FPS_DT);
-            this.animAccumulator -= THIRTY_FPS_DT * numAnimFrames;
+            let numAnimFrames = Math.floor(this.#thirtyFPSAccumulator / THIRTY_FPS_DT);
+            this.#thirtyFPSAccumulator -= THIRTY_FPS_DT * numAnimFrames;
 
             // 60fps animation frames
-            let numCombFrames = Math.floor(this.combAccumulator / SIXTY_FPS_DT);
-            this.combAccumulator -= SIXTY_FPS_DT * numCombFrames;
+            let numCombFrames = Math.floor(this.#sixtyFPSAccumulator / SIXTY_FPS_DT);
+            this.#sixtyFPSAccumulator -= SIXTY_FPS_DT * numCombFrames;
 
             // remove objects that are done combining
-            this.combiningObjects = this.combiningObjects.filter((obj) => {
+            this.#combiningObjects = this.#combiningObjects.filter((obj) => {
                 return obj.isCombining();
             })
 
             // game logic
-            if(!this.gameOver){
+            if(!this.#gameOver){
                 // drop object
-                if(this.dropTimer > 0){
-                    this.dropTimer -= frameTime;
-                    this.dropObject = false;
+                if(this.#dropDelayTimer > 0){
+                    // cancel drop
+                    this.#dropDelayTimer -= frameTime;
+                    this.#tryDropObject = false;
                 }
                 else if(this.dropObject){
-                    this.drop();
-                    this.dropObject = false;
-                    this.dropTimer = DROP_DELAY;
+                    this.#tryDropObject();
+                    this.#tryDropObject = false;
+                    this.#dropDelayTimer = DROP_DELAY_SECONDS * 1000;
                 }
 
                 // physics loop
@@ -356,80 +362,80 @@ export default class Game {
 
                     // update objs
                     // remove colliided objects
-                    this.activeObjects = this.activeObjects.filter((obj) => {
+                    this.#activeObjects = this.#activeObjects.filter((obj) => {
                         if(obj.isCombining()){
                             obj.destroyBody();
-                            this.combiningObjects.push(obj);
+                            this.#combiningObjects.push(obj);
                         }
 
                         return !obj.isCombining();
                     })
 
                     // create new objects
-                    this.objsToCreate.forEach( (o) => {
+                    this.#objectsToCreate.forEach( (o) => {
                         let newObj = new OBJECT_TYPES[o.size](this, o.pos);
                         newObj.createBody();
-                        this.activeObjects.push(newObj);
+                        this.#activeObjects.push(newObj);
 
                         if(o.size > this.largestObject){
-                            this.largestObject = o.size;
+                            this.#largestObject = o.size;
                         }
                     })
 
                     // reset list
-                    this.objsToCreate.length = 0;
+                    this.#objectsToCreate = [];
 
                     // update active objects
-                    this.activeObjects.forEach( (o) => {
-                        o.update();
+                    this.#activeObjects.forEach( (obj) => {
+                        obj.update();
                     })
-                }
+                } // end physics loop
 
                 // interpolate
-                this.activeObjects.forEach((o) => {
-                    o.interpolate(this.physAccumulator / PHYSICS_DT);
+                this.#activeObjects.forEach((obj) => {
+                    obj.interpolate(this.#physicsAccumulator / PHYSICS_DT);
                 })
 
                 // update animations
-                this.ui.updateAnimation(numAnimFrames);
+                this.#ui.updateAnimation(numAnimFrames);
 
                 if(numAnimFrames > 0){
-                    this.activeObjects.forEach((obj) => {
+                    this.#activeObjects.forEach((obj) => {
                         if(obj.isAnimated()){
                             obj.updateAnimation(numAnimFrames);
                         }
                     })
                 }
 
-                if(this.currentObject.isAnimated()){
-                    this.currentObject.updateAnimation(numAnimFrames);
+                if(this.#currentObject.isAnimated()){
+                    this.#currentObject.updateAnimation(numAnimFrames);
                 }
 
-                if(this.nextObject.isAnimated()){
-                    this.nextObject.updateAnimation(numAnimFrames);
+                if(this.#nextObject.isAnimated()){
+                    this.#nextObject.updateAnimation(numAnimFrames);
                 }
 
                 // update player
-                this.player.update();
+                this.#player.update();
     
                 // update inactive objects
-                this.currentObject.update();
-                this.nextObject.update();
+                this.#currentObject.update();
+                this.#nextObject.update();
 
                 // check game over
-                this.checkGameOver(frameTime);
-            }
+                this.#checkGameOver(frameTime);
+            } // end game logic
 
             // update combining objects regardless of gameover
             if(numCombFrames > 0){
-                this.combiningObjects.forEach((obj) => {
+                this.#combiningObjects.forEach((obj) => {
                     obj.updateCombination(numCombFrames);
                 })
             }
         }
-        else if(!this.hidden){
-            this.skip = false;
-            console.log('skipped first');
+        else if(!this.#hidden){
+            this.#skip = false;
+            console.log('skipped first frame');
         }
     }
 }
