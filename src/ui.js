@@ -6,37 +6,42 @@ const OBJ_CIRCLE_CENTER = {x: 1064 , y: 492};
 const OBJ_CIRCLE_RADIUS = 106;
 const OBJ_CIRCLE_IMG_WIDTH = 48;
 const OBJ_CIRCLE_IMG_HEIGHT = 48;
+const GAMEOVER_TIMER_OFFSET_X = 50;
 const GAMEOVER_OFFSET_Y = 10;
 
 export default class UI{
+    // game instance
+    #game;
+
+    // images
+    #uiImg = document.getElementById(UI_IMG_ID);
+    #questionMarkImg = document.getElementById(QM_IMG_ID);
+    #objectImgs = [];
+    #gameOverImg = document.getElementById(GAMEOVER_IMG_ID);
+    #largestObject = 4;
+
+    // animation
+    #animationFrame = 0;
+
+
     constructor(game){
-        this.game = game;
+        this.#game = game;
 
-        this.uiImg = this.uiImg = document.getElementById('ui');
-
-        this.questionMarkImg = document.getElementById("qm");
-        this.objectImgs = []
-        this.makeObjCircle();
-        this.animationFrame = 0;
-
-        this.gameOverImg = document.getElementById("gameover");
+        this.#makeObjCircle();
     }
 
     // accessors
-    getNextObjPos(){ return NEXT_OBJ_POS; }
+    get nextObjectPos() { return NEXT_OBJ_POS; }
 
     // mutators
-    updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES }
+    set largestObject(size) { this.#largestObject = size; }
 
-    // utility
-    getSpriteSheetCoords(){
-        return {
-            x: Math.floor(this.animationFrame % 5) * OBJ11_SPRITE_WIDTH,
-            y: Math.floor(this.animationFrame / 5) * OBJ11_SPRITE_HEIGHT
-        }
+    updateAnimation(numFrames) {
+        this.#animationFrame = (this.#animationFrame + numFrames) % NUM_ANIM_FRAMES;
     }
 
-    makeObjCircle(){
+    // utility
+    #makeObjCircle(){
         for(let i = 0; i < 11; ++i){
             let angle = 2 * Math.PI * ((i + 1) / 12) - (Math.PI / 2);
 
@@ -54,18 +59,27 @@ export default class UI{
 
     }
 
+    #getSpriteSheetCoords() {
+        return {
+            x: Math.floor(this.animationFrame % 5) * OBJ11_SPRITE_WIDTH,
+            y: Math.floor(this.animationFrame / 5) * OBJ11_SPRITE_HEIGHT
+        }
+    }
+
     // render
-    draw(context){
+    draw(context) {
+        // draw main UI
         context.drawImage(
-            this.uiImg,
+            this.#uiImg,
             0,0,
-            this.uiImg.width, this.uiImg.height
+            this.#uiImg.width, this.#uiImg.height
         );
 
-        this.objectImgs.forEach((obj, idx) => {
-            if(idx > this.game.getLargestObject()){
+        // draw object circle
+        this.#objectImgs.forEach((obj, idx) => {
+            if(idx > this.#largestObject){
                 context.drawImage(
-                    this.questionMarkImg,
+                    this.#questionMarkImg,
                     obj.x, obj.y,
                     OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT
                 )
@@ -78,7 +92,7 @@ export default class UI{
                 )
             }
             else{
-                let spriteSheetCoords = this.getSpriteSheetCoords();
+                let spriteSheetCoords = this.#getSpriteSheetCoords();
 
                 context.drawImage(
                     obj.img,
@@ -92,22 +106,22 @@ export default class UI{
         })
 
         context.fillText(
-            this.game.getScore(),
+            this.#game.score,
             SCORE_POS.x, SCORE_POS.y
         );
 
-        if(this.game.getGameOverTimer() > 0){
+        if(this.#game.gameOverTimer > 0){
             context.fillText(
-                (this.game.getGameOverTimer() / 1000).toFixed(2),
-                this.game.getContainerRightEdge() + 50, this.game.getGameOverY()
+                (this.#game.gameOverTimer / 1000).toFixed(2),
+                this.#game.containerRight + GAMEOVER_TIMER_OFFSET_X, this.#game.containerTop
             );
         }
 
-        if(this.game.isGameOver()){
+        if(this.#game.isGameOver){
             context.drawImage(
-                this.gameOverImg,
-                this.game.getWidth() * 0.5 - this.gameOverImg.width * 0.5, GAMEOVER_OFFSET_Y,
-                this.gameOverImg.width, this.gameOverImg.height
+                this.#gameOverImg,
+                this.#game.width * 0.5 - this.#gameOverImg.width * 0.5, GAMEOVER_OFFSET_Y,
+                this.#gameOverImg.width, this.#gameOverImg.height
             )
         }
 

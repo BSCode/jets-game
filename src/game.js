@@ -43,9 +43,7 @@ export default class Game {
     #nextObject = null;             // next object that will be queued after drop
     #activeObjects = [];            // list of active objects that have physics
     #combiningObjects = [];         // list of objects in combining animation
-    #objectsToCreate = [];          // list of objects to be created after physics step
-    // TODO: MOVE TO UI CLASS
-    #largestObject = 4;             // largest object created for UI
+    #objectsToCreate = [];          // list of objects to be created after physics step           // largest object created for UI
 
     // pause on hide and skip first frame
     #hidden = false;                // track when tab is hidden and pause                
@@ -83,7 +81,6 @@ export default class Game {
     get containerTop() { return this.#container.topEdge; }
     get containerBottom() { return this.#container.bottomEdge; }
     get input() { return this.#inputPos; }
-    get largestObject() { return this.#largestObject; }
     get score() { return this.#score; }
     get gameOverTimer() { return this.#gameOverTimer; }
     get isGameOver() { return this.#gameOver; }
@@ -198,8 +195,6 @@ export default class Game {
         this.#activeObjects = [];
         this.#combiningObjects = [];
         this.#objectsToCreate = [];
-
-        this.#largestObject = 4;
 
         // reset player
         this.#player.reset();
@@ -378,7 +373,7 @@ export default class Game {
                         this.#activeObjects.push(newObj);
 
                         if(o.size > this.largestObject){
-                            this.#largestObject = o.size;
+                            this.#ui.largestObject = o.size;
                         }
                     })
 
