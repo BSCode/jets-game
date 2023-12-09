@@ -81,6 +81,7 @@ export default class Game {
     get containerTop() { return this.#container.topEdge; }
     get containerBottom() { return this.#container.bottomEdge; }
     get input() { return this.#inputPos; }
+    get world() { return this.#world; }
     get score() { return this.#score; }
     get gameOverTimer() { return this.#gameOverTimer; }
     get isGameOver() { return this.#gameOver; }
