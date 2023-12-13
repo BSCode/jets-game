@@ -1,5 +1,8 @@
-import { OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, NUM_ANIM_FRAMES} from "./objects.js";
+import Object from "./objects.js";
 
+const UI_IMG_ID = "ui";
+const QM_IMG_ID = "qm";
+const GAMEOVER_IMG_ID = "gameover";
 const NEXT_OBJ_POS = {x: 1065, y: 196};
 const SCORE_POS = {x: 198, y: 345};
 const OBJ_CIRCLE_CENTER = {x: 1064 , y: 492};
@@ -16,13 +19,11 @@ export default class UI{
     // images
     #uiImg = document.getElementById(UI_IMG_ID);
     #questionMarkImg = document.getElementById(QM_IMG_ID);
-    #objectImgs = [];
     #gameOverImg = document.getElementById(GAMEOVER_IMG_ID);
-    #largestObject = 4;
 
-    // animation
-    #animationFrame = 0;
-
+    // object circle
+    #objectCircle = [];             // list of objects for object circle
+    #largestObject = 4;             // largest object made this game
 
     constructor(game){
         this.#game = game;
@@ -32,37 +33,22 @@ export default class UI{
 
     // accessors
     get nextObjectPos() { return NEXT_OBJ_POS; }
+    get largestObject() { return this.#largestObject; }
 
     // mutators
     set largestObject(size) { this.#largestObject = size; }
-
-    updateAnimation(numFrames) {
-        this.#animationFrame = (this.#animationFrame + numFrames) % NUM_ANIM_FRAMES;
-    }
 
     // utility
     #makeObjCircle(){
         for(let i = 0; i < 11; ++i){
             let angle = 2 * Math.PI * ((i + 1) / 12) - (Math.PI / 2);
 
-            let imgCenter = {
+            let pos = {
                 x: Math.cos(angle) * OBJ_CIRCLE_RADIUS + OBJ_CIRCLE_CENTER.x,
                 y: Math.sin(angle) * OBJ_CIRCLE_RADIUS + OBJ_CIRCLE_CENTER.y
             }
             
-            this.objectImgs.push({
-                img: document.getElementById('obj' + (i + 1)),
-                x: imgCenter.x - OBJ_CIRCLE_IMG_WIDTH / 2,
-                y: imgCenter.y - OBJ_CIRCLE_IMG_HEIGHT / 2
-            });
-        }
-
-    }
-
-    #getSpriteSheetCoords() {
-        return {
-            x: Math.floor(this.animationFrame % 5) * OBJ11_SPRITE_WIDTH,
-            y: Math.floor(this.animationFrame / 5) * OBJ11_SPRITE_HEIGHT
+            this.#objectCircle.push(new Object(this.#game, i, pos));
         }
     }
 
@@ -76,31 +62,16 @@ export default class UI{
         );
 
         // draw object circle
-        this.#objectImgs.forEach((obj, idx) => {
+        this.#objectCircle.forEach((obj, idx) => {
             if(idx > this.#largestObject){
                 context.drawImage(
                     this.#questionMarkImg,
-                    obj.x, obj.y,
-                    OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT
-                )
-            }
-            else if(idx < 10){
-                context.drawImage(
-                    obj.img,
-                    obj.x, obj.y,
+                    obj.pos.x - (OBJ_CIRCLE_IMG_WIDTH * 0.5), obj.pos.y - (OBJ_CIRCLE_IMG_HEIGHT * 0.5),
                     OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT
                 )
             }
             else{
-                let spriteSheetCoords = this.#getSpriteSheetCoords();
-
-                context.drawImage(
-                    obj.img,
-                    spriteSheetCoords.x, spriteSheetCoords.y,
-                    OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT,
-                    obj.x, obj.y,
-                    OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT
-                )
+                obj.drawSimple(context, OBJ_CIRCLE_IMG_WIDTH, OBJ_CIRCLE_IMG_HEIGHT);
             }
 
         })
@@ -124,6 +95,16 @@ export default class UI{
                 this.#gameOverImg.width, this.#gameOverImg.height
             )
         }
+    }
 
+    // update
+    update(frameTime) {
+        this.#objectCircle.forEach((obj) => {
+            obj.update(frameTime);
+        })
+    }
+
+    reset() {
+        this.#largestObject = 4;
     }
 }

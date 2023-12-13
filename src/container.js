@@ -14,10 +14,10 @@ export default class Container {
     #width = CONTAINER_WIDTH;
     #height = CONTAINER_HEIGHT;
     #edgeWidth = CONTAINER_EDGE_WIDTH;
-    #leftEdge;
-    #rightEdge;
-    #topEdge;
-    #bottomEdge;
+    #leftEdge;                      // left edge pixel x coord
+    #rightEdge;                     // right edge pixel x coord
+    #topEdge;                       // top edge pixel y coord
+    #bottomEdge;                    // bottom edge pixel y coord
 
     // physics
     #body = null;
@@ -78,7 +78,7 @@ export default class Container {
                    ),
             friction: CONTAINER_FRICTION
         })
-        this.body.createFixture({
+        this.#body.createFixture({
             shape: planck.Edge(
                     canvasToPhys(bottomLeft, this.#game.width, this.#game.height),
                     canvasToPhys(bottomRight, this.#game.width, this.#game.height)

@@ -1,4 +1,5 @@
 const PLAYER_IMG_ID = "player";
+const SPRITE_SCALE = 0.5;
 const SPRITE_OFFSET_X = -30;
 const SPRITE_OFFSET_Y = -30;
 
@@ -10,16 +11,14 @@ export default class Player {
     #game;                      
 
     // player sprite
-    static #spriteImg = document.getElementById(PLAYER_IMG_ID);
-    static #spriteWidth = this.#spriteImg.width * 0.5;      
-    static #spriteHeight = this.#spriteImg.height * 0.5;
-    #spritePos;                 // current pos of sprite offset from player:
-                                //  {x: val, y: val}
-    #aimTarget;                 // Y value to end aiming line
+    #spriteImg = document.getElementById(PLAYER_IMG_ID);
+    #spriteWidth = this.#spriteImg.width * SPRITE_SCALE;      
+    #spriteHeight = this.#spriteImg.height * SPRITE_SCALE;
+    #aimTarget;                     // Y value to end aiming line
 
     // player positioning
-    #pos;                       // player position {x: val, y: val} 
-    #moveConstraint = {};       // player move constraints {left: val, right: val}
+    #pos;                           // player position {x: val, y: val} 
+    #moveConstraint = {};           // player move constraints {left: val, right: val}
 
 
     constructor(game){
@@ -30,12 +29,7 @@ export default class Player {
             'y': PLAYER_Y
         }
 
-        this.#spritePos = {
-            'x': this.#pos.x - (Player.#spriteWidth * 0.5) + SPRITE_OFFSET_X,
-            'y': this.#pos.y - (Player.#spriteHeight * 0.5) + SPRITE_OFFSET_Y
-        }
-
-        this.aimTarget = this.#game.containerBottom;
+        this.#aimTarget = this.#game.containerBottom;
     }
 
     // accessors
@@ -53,11 +47,16 @@ export default class Player {
 
     // render
     draw(context) {
-        if(!this.#game.isGameOver()){
+        let spritePos = {
+            'x': this.#pos.x - (this.#spriteWidth * 0.5) + SPRITE_OFFSET_X,
+            'y': this.#pos.y - (this.#spriteHeight * 0.5) + SPRITE_OFFSET_Y
+        }
+
+        if(!this.#game.isGameOver){
             context.drawImage(
-                Player.#spriteImg,
-                this.#spritePos.x, this.#spritePos.y,
-                Player.#spriteWidth, Player.spriteHeight
+                this.#spriteImg,
+                spritePos.x, spritePos.y,
+                this.#spriteWidth, this.#spriteHeight
             );
 
             context.beginPath();
@@ -73,12 +72,9 @@ export default class Player {
             this.#moveConstraint.right,
             Math.max(this.#game.input.x, this.#moveConstraint.left)
         );
-
-        this.#spritePos.x = this.#pos.x - Player.#spriteWidth * 0.5 + SPRITE_OFFSET_X;
     }
 
     reset() {
-        this.#pos.x = this.game.width * 0.5;
-        this.#spritePos.x = this.pos.x - Player.#spriteWidth * 0.5 + SPRITE_OFFSET_X;
+        this.#pos.x = this.#game.width * 0.5;
     }
 }

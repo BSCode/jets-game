@@ -1,17 +1,14 @@
 import UI from './ui.js';
 import Container from './container.js';
 import Player from './player.js';
-import { OBJECT_TYPES } from './objects.js';
+import Object from './objects.js';
 import { canvasToPhys, physToCanvas } from './conversion.js';
 
 const GRAVITY = planck.Vec2(0, -10);
 const PHYSICS_DT = 1000 / 240;          // 240 hz
-const THIRTY_FPS_DT = 1000 / 30;
-const SIXTY_FPS_DT = 1000 / 60;
 
 const DROP_DELAY_SECONDS = 0.5;
 const GAMEOVER_SECONDS = 5;
-
 
 export default class Game {
     // singleton tracker
@@ -19,12 +16,12 @@ export default class Game {
 
     // canvas
     #canvas;
-    #canvasObserver = new ResizeObserver(this.#setInputScaling);
+    #canvasObserver;
 
     // class instances
-    #ui = new UI(this);
-    #container = new Container(this);
-    #player = new Player(this);
+    #ui;
+    #container;
+    #player;
 
     // input values
     #inputPos;                      // current input location: {x: val, y: val}
@@ -35,8 +32,6 @@ export default class Game {
     // physics and update loop
     #world = planck.World(GRAVITY);
     #physicsAccumulator = 0;        // accumulator for physics sim
-    #thirtyFPSAccumulator = 0;      // accumulator for 30 fps animations
-    #sixtyFPSAccumulator = 0;       // accumulator for 60 fps animations
 
     // object tracking
     #currentObject = null;          // current object that will be dropped
@@ -66,6 +61,18 @@ export default class Game {
 
         this.#canvas = canvas;
 
+        this.#canvasObserver = new ResizeObserver(() => {
+            const rect = this.#canvas.getBoundingClientRect();
+
+            this.#inputWidthScale = rect.width / this.width;
+            this.#inputHeightScale = rect.height / this.height;
+        });
+
+        this.#ui = new UI(this);
+        this.#container = new Container(this);
+        this.#player = new Player(this);
+
+
         this.#inputPos = {
             x: this.#canvas.width * 0.5,
             y: this.#canvas.height * 0.5
@@ -85,14 +92,18 @@ export default class Game {
     get score() { return this.#score; }
     get gameOverTimer() { return this.#gameOverTimer; }
     get isGameOver() { return this.#gameOver; }
-    
+
     // initialization
     init() {
         // create container phyics
         this.#container.createBody();
 
         // input scaling
-        this.#setInputScaling();
+        const rect = this.#canvas.getBoundingClientRect();
+
+        this.#inputWidthScale = rect.width / this.width;
+        this.#inputHeightScale = rect.height / this.height;
+
         this.#canvasObserver.observe(this.#canvas);
 
         // setup input eventListeners
@@ -151,10 +162,10 @@ export default class Game {
             const objB = contact.getFixtureB().getBody().getUserData().gameObj;
             const contactPoint = contact.getWorldManifold().points[0];
             
-            // check if objects are the same
-            if(objA.radius == objB.radius){
+            // check if objects are the same size
+            if(objA.size == objB.size){
                 // do nothing if either object is used for another contact
-                if(objA.isCombining() || objB.isCombining()){
+                if(objA.isCombining || objB.isCombining){
                     return;
                 }
 
@@ -165,12 +176,12 @@ export default class Game {
                 objB.startCombination(canvasPoint);
 
                 // add score
-                let nextSize = objA.getSize() + 1;
+                let nextSize = objA.size + 1;
 
                 this.#score += (Math.pow(nextSize, 2) + nextSize) / 2;
 
                 // queue up a new object if they were not max size
-                if(!objA.isMaxRadius()){
+                if(!objA.isMaxSize){
                     this.#objectsToCreate.push({
                         size: nextSize,
                         pos: canvasPoint
@@ -186,8 +197,6 @@ export default class Game {
     reset() {
         // reset accumulators
         this.#physicsAccumulator = 0;
-        this.#thirtyFPSAccumulator = 0;
-        this.#sixtyFPSAccumulator = 0;
 
         // remove all existing objects
         this.#activeObjects.forEach((obj) => {
@@ -196,6 +205,9 @@ export default class Game {
         this.#activeObjects = [];
         this.#combiningObjects = [];
         this.#objectsToCreate = [];
+
+        // reset UI
+        this.#ui.reset();
 
         // reset player
         this.#player.reset();
@@ -221,23 +233,16 @@ export default class Game {
     createBody(bodyDef) {
         return this.#world.createBody(bodyDef);
     }
+    
     destroyBody(body) {
         this.#world.destroyBody(body);
     }
 
     // utility
-    #setInputScaling() {
-        // set input scaling based on canvas size
-        const rect = this.#canvas.getBoundingClientRect();
-
-        this.#inputWidthScale = rect.width / this.#canvas.width;
-        this.#inputHeightScale = rect.height / this.#canvas.height;
-    }
-
     #generateObject(pos) {
-        let idx = Math.floor(Math.random() * 5);
-        // idx = 9
-        return new OBJECT_TYPES[idx](this, pos);
+        let size = Math.floor(Math.random() * 5);
+        // size = 9
+        return new Object(this, size, pos);
     }
 
     #dropObject() {
@@ -248,9 +253,9 @@ export default class Game {
         this.#currentObject = this.#nextObject;
         this.#currentObject.followPlayer = true;
 
-        this.player.setMoveConstraint(this.#currentObject.radius)
+        this.#player.setMoveConstraint(this.#currentObject.radius)
 
-        this.nextObject = this.#generateObject(this.#ui.nextObjectPos);
+        this.#nextObject = this.#generateObject(this.#ui.nextObjectPos);
     }
 
     #checkOutOfBounds(obj) {
@@ -320,20 +325,10 @@ export default class Game {
         if(!this.#skip && !isNaN(frameTime)){
             // update accumulators
             this.#physicsAccumulator += frameTime;
-            this.#thirtyFPSAccumulator += frameTime;
-            this.#sixtyFPSAccumulator += frameTime;
-
-            // 30fps animation frames
-            let numAnimFrames = Math.floor(this.#thirtyFPSAccumulator / THIRTY_FPS_DT);
-            this.#thirtyFPSAccumulator -= THIRTY_FPS_DT * numAnimFrames;
-
-            // 60fps animation frames
-            let numCombFrames = Math.floor(this.#sixtyFPSAccumulator / SIXTY_FPS_DT);
-            this.#sixtyFPSAccumulator -= SIXTY_FPS_DT * numCombFrames;
-
+            
             // remove objects that are done combining
             this.#combiningObjects = this.#combiningObjects.filter((obj) => {
-                return obj.isCombining();
+                return obj.isCombining;
             })
 
             // game logic
@@ -344,36 +339,36 @@ export default class Game {
                     this.#dropDelayTimer -= frameTime;
                     this.#tryDropObject = false;
                 }
-                else if(this.dropObject){
-                    this.#tryDropObject();
+                else if(this.#tryDropObject){
+                    this.#dropObject();
                     this.#tryDropObject = false;
                     this.#dropDelayTimer = DROP_DELAY_SECONDS * 1000;
                 }
 
                 // physics loop
-                while(this.physAccumulator >= PHYSICS_DT){
+                while(this.#physicsAccumulator >= PHYSICS_DT){
                     // simulate
-                    this.world.step(PHYSICS_DT / 1000);
-                    this.physAccumulator -= PHYSICS_DT;
+                    this.#world.step(PHYSICS_DT / 1000);
+                    this.#physicsAccumulator -= PHYSICS_DT;
 
                     // update objs
-                    // remove colliided objects
+                    // remove combining objects
                     this.#activeObjects = this.#activeObjects.filter((obj) => {
-                        if(obj.isCombining()){
+                        if(obj.isCombining){
                             obj.destroyBody();
                             this.#combiningObjects.push(obj);
                         }
 
-                        return !obj.isCombining();
+                        return !obj.isCombining;
                     })
 
                     // create new objects
                     this.#objectsToCreate.forEach( (o) => {
-                        let newObj = new OBJECT_TYPES[o.size](this, o.pos);
+                        let newObj = new Object(this, o.size, o.pos);
                         newObj.createBody();
                         this.#activeObjects.push(newObj);
 
-                        if(o.size > this.largestObject){
+                        if(o.size > this.#ui.largestObject){
                             this.#ui.largestObject = o.size;
                         }
                     })
@@ -383,7 +378,7 @@ export default class Game {
 
                     // update active objects
                     this.#activeObjects.forEach( (obj) => {
-                        obj.update();
+                        obj.update(PHYSICS_DT);
                     })
                 } // end physics loop
 
@@ -393,41 +388,23 @@ export default class Game {
                 })
 
                 // update animations
-                this.#ui.updateAnimation(numAnimFrames);
-
-                if(numAnimFrames > 0){
-                    this.#activeObjects.forEach((obj) => {
-                        if(obj.isAnimated()){
-                            obj.updateAnimation(numAnimFrames);
-                        }
-                    })
-                }
-
-                if(this.#currentObject.isAnimated()){
-                    this.#currentObject.updateAnimation(numAnimFrames);
-                }
-
-                if(this.#nextObject.isAnimated()){
-                    this.#nextObject.updateAnimation(numAnimFrames);
-                }
+                this.#ui.update(frameTime);
 
                 // update player
                 this.#player.update();
     
                 // update inactive objects
-                this.#currentObject.update();
-                this.#nextObject.update();
+                this.#currentObject.update(frameTime);
+                this.#nextObject.update(frameTime);
 
                 // check game over
                 this.#checkGameOver(frameTime);
             } // end game logic
 
             // update combining objects regardless of gameover
-            if(numCombFrames > 0){
-                this.#combiningObjects.forEach((obj) => {
-                    obj.updateCombination(numCombFrames);
-                })
-            }
+            this.#combiningObjects.forEach((obj) => {
+                obj.update(frameTime);
+            })
         }
         else if(!this.#hidden){
             this.#skip = false;

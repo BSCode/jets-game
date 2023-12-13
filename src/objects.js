@@ -1,11 +1,22 @@
 import { canvasToPhys, physToCanvas, radToPhys } from "./conversion.js";
 
-export const OBJ11_SPRITE_WIDTH = 186;
-export const OBJ11_SPRITE_HEIGHT = 186;
-export const NUM_ANIM_FRAMES = 30;
-const NUM_COMBINATION_FRAMES = 8;
+const SPRITE_SHEET_COLS = 5;
 
-const OBJ_SIZES = [
+const OBJECT_IMGs = [
+    { img: document.getElementById('obj1'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj2'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj3'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj4'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj5'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj6'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj7'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj8'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj9'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj10'), fullBubble: false, anim: false, animFrames: 0 },
+    { img: document.getElementById('obj11'), fullBubble: true, anim: true, animFrames: 30 },
+]
+
+const OBJ_RADII = [
     14,
     20,
     27,
@@ -19,125 +30,172 @@ const OBJ_SIZES = [
     124
 ];
 
+const NUM_COMBINATION_FRAMES = 8;
+const COMBINATION_FPS = 60;
+
 const OBJ_DENSITY = 4;
 const OBJ_FRICTION = 0.4;
 const OBJ_RESTITUTION = 0.1;
 
-class Object{
-    constructor(game, radius, pos){
-        this.game = game;
-        this.radius = radius;
-        this.lastPos = pos;
-        this.pos = pos;
+export default class Object {
+    // game instance
+    #game;
 
-        this.size = OBJ_SIZES.indexOf(this.radius);
+    // object values
+    #pos;                           // current render center point of object: {x: val, y: val}
+    #lastPos;                       // pos from last frame (for interpolation)
+    #size;                          // size index of the object: 0-10
+    #radius;                        // radius value of object
+    #followPlayer = false;          // whether or not object is attached to player
 
-        this.body = null;
+    // sprite values
+    #spriteImg;                     // image element for the object
+    #spriteImgWidth;                // width of sprite in image (full size if not sprite sheet)
+    #spriteImgHeight;               // height of sprite in image
+    #spriteWidth;                   // render width of sprite
+    #spriteHeight;                  // render height of sprite
+    #animated;                      // boolean whether object is animated
+    #numAnimationFrames;            // number of frames of animation in sprite sheet
+    #curAnimationFrame = 0;         // current animation frame to draw
+    #animationDT;                   // delta time between animation frames
+    #animationAccumulator = 0;      // accumulated time for animation
 
-        this.followPlayer = false;
+    // combination animation
+    #combining = false;             // boolean whether the object is colliding
+    #combinationDelta = null;       // distance to combination point: {dx: val, dy: val}
+    #curCombinationFrame = 0;       // current combination frame to draw
+    #combinationDT = 1000 / COMBINATION_FPS;    // delta time between combination frames
+    #combinationAccumulator = 0;    // accumulated time for combination
 
-        this.combining = false;
-        this.combinationDelta = null;
-        this.combinationFrames = 0;
-    }
+    // physics
+    #body = null;
 
-    setupImg(id, fullBubble = false, sprtWidth = null, sprtHeight = null, isAnim = false){
-        this.image = document.getElementById(id);
+    constructor(game, size, pos) {
+        this.#game = game;
+        
+        let imgData = OBJECT_IMGs[size];
+        this.#spriteImg = imgData.img;
 
-        if(fullBubble){
-            this.renderWidth = this.radius * 2;
-            this.renderHeight = this.radius * 2;
+        this.#pos = pos;
+        this.#lastPos = pos;
+        this.#size = size;
+        this.#radius = OBJ_RADII[size];
+
+        if(imgData.fullBubble){
+            this.#spriteWidth = this.radius * 2;
+            this.#spriteHeight = this.radius * 2;
         }
         else{
-            this.renderWidth = (this.radius - 1) * Math.sqrt(2);
-            this.renderHeight = (this.radius - 1) * Math.sqrt(2);
+            this.#spriteWidth = (this.radius - 1) * Math.sqrt(2);
+            this.#spriteHeight = (this.radius - 1) * Math.sqrt(2);
         }
 
-        this.spriteWidth = sprtWidth ? sprtWidth : this.image.width;
-        this.spriteHeight = sprtHeight ? sprtHeight : this.image.height;
+        this.#animated = imgData.anim;
+        this.#numAnimationFrames = imgData.animFrames;
 
-        this.animated = isAnim;
-        this.animationFrame = 0;
+        if(this.#animated){
+            let dims = this.#getSpriteDimensions();
+            this.#spriteImgWidth = dims.width;
+            this.#spriteImgHeight = dims.height;
+
+            this.#animationDT = 1000 / this.#numAnimationFrames;
+        }
+        else{
+            this.#spriteImgWidth = this.#spriteImg.width;
+            this.#spriteImgHeight = this.#spriteImg.height;
+        }
     }
 
     // accessors
-    getPos(){ return this.pos; }
-    getRadius(){ return this.radius; }
-    getSize(){ return this.size; }
-    isMaxRadius(){ return this.radius == OBJ_SIZES[10]; }
-    isAnimated(){ return this.animated; }
-    isCombining(){ return this.combining; }
+    get pos() { return this.#pos; }
+    get size(){ return this.#size; }
+    get radius() { return this.#radius; }
+    get isMaxSize() { return this.#size == (OBJ_RADII.length - 1); }
+    get isAnimated() { return this.#animated; }
+    get isCombining() { return this.#combining; }
 
     // mutators
-    setFollowPlayer(){ this.followPlayer = true; }
-    updateAnimation(numFrames){ this.animationFrame = (this.animationFrame + numFrames) % NUM_ANIM_FRAMES; }
+    set followPlayer(newVal) { this.#followPlayer = newVal; }
 
     startCombination(targetPos){
-        this.combining = true;
+        this.#combining = true;
 
-        this.combinationDelta = {
-            dx: targetPos.x - this.pos.x,
-            dy: targetPos.y - this.pos.y
+        this.#combinationDelta = {
+            dx: targetPos.x - this.#pos.x,
+            dy: targetPos.y - this.#pos.y
         }
     }
 
-    updateCombination(numFrames){
-        this.pos.x += this.combinationDelta.dx * (1 / NUM_COMBINATION_FRAMES) * numFrames;
-        this.pos.y += this.combinationDelta.dy * (1 / NUM_COMBINATION_FRAMES) * numFrames;
-
-        this.combinationFrames += numFrames;
-
-        if(this.combinationFrames >= NUM_COMBINATION_FRAMES){
-            this.combining = false;
-        }
-    }
-
-    createBody(){
-        this.body = this.game.createBody({
+    createBody() {
+        this.#body = this.#game.createBody({
             type: 'dynamic',
-            position: canvasToPhys(this.pos, this.game.width, this.game.height),
+            position: canvasToPhys(this.#pos, this.#game.width, this.#game.height),
             allowSleep: false,
             userData: {gameObj: this}
         });
 
-        this.body.createFixture({
-            shape: planck.Circle(radToPhys(this.radius)),
+        this.#body.createFixture({
+            shape: planck.Circle(radToPhys(this.#radius)),
             density: OBJ_DENSITY,
             friction: OBJ_FRICTION,
             restitution: OBJ_RESTITUTION
         });
     }
 
-    destroyBody(){
-        this.game.destroyBody(this.body);
-        this.body = null;
+    destroyBody() {
+        this.#game.destroyBody(this.#body);
+        this.#body = null;
     }
 
-    interpolate(alpha){
-        this.pos.x = this.pos.x * alpha + this.lastPos.x * (1 - alpha);
-        this.pos.y = this.pos.y * alpha + this.lastPos.y * (1 - alpha);
+    interpolate(alpha) {
+        this.#pos.x = this.#pos.x * alpha + this.#lastPos.x * (1 - alpha);
+        this.#pos.y = this.#pos.y * alpha + this.#lastPos.y * (1 - alpha);
     }
 
-    // utility 
-    getSpriteSheetCoords(){
+    // utility
+    #getSpriteDimensions() {
         return {
-            x: Math.floor(this.animationFrame % 5) * this.spriteWidth,
-            y: Math.floor(this.animationFrame / 5) * this.spriteHeight
+            width: Math.round(this.#spriteImg.width / SPRITE_SHEET_COLS),
+            height: Math.round(this.#spriteImg.height / Math.ceil( this.#numAnimationFrames / SPRITE_SHEET_COLS ))
+        };
+    }
+
+    #getSpriteSheetCoords() {
+        return {
+            x: Math.floor(this.#curAnimationFrame % SPRITE_SHEET_COLS) * this.#spriteImgWidth,
+            y: Math.floor(this.#curAnimationFrame / SPRITE_SHEET_COLS) * this.#spriteImgHeight
+        };
+    }
+
+    #updateAnimation(numFrames) {
+        this.#curAnimationFrame = (this.#curAnimationFrame + numFrames) % this.#numAnimationFrames;
+    }
+
+    #updateCombination(numFrames) {
+        let updateFrames = Math.min(numFrames, NUM_COMBINATION_FRAMES - this.#curCombinationFrame);
+
+        this.#pos.x += this.#combinationDelta.dx * (1 / NUM_COMBINATION_FRAMES) * updateFrames;
+        this.#pos.y += this.#combinationDelta.dy * (1 / NUM_COMBINATION_FRAMES) * updateFrames;
+
+        this.#curCombinationFrame += numFrames;
+
+        if(this.#curCombinationFrame >= NUM_COMBINATION_FRAMES){
+            this.#combining = false;
         }
     }
 
     // render
-    draw(context){
-        let renderPos = {
-            'x': this.pos.x - (this.renderWidth * 0.5),
-            'y': this.pos.y - (this.renderHeight * 0.5)
+    draw(context) {
+        let spritePos = {
+            'x': this.#pos.x - (this.#spriteWidth * 0.5),
+            'y': this.#pos.y - (this.#spriteHeight * 0.5)
         }
 
-        let renderAngle = this.body ? -this.body.getAngle() : 0;
+        let renderAngle = this.#body ? -this.#body.getAngle() : 0;
 
         // draw bubble
         context.beginPath();
-        context.arc(this.pos.x, this.pos.y, this.radius - 1, 0, 2*Math.PI);
+        context.arc(this.#pos.x, this.#pos.y, this.#radius - 1, 0, 2 * Math.PI);
         context.save();
         context.globalAlpha = 0.5;
         context.fill();
@@ -146,117 +204,84 @@ class Object{
 
         // draw sprite
         context.save();
-        context.translate(renderPos.x + this.renderWidth / 2, renderPos.y + this.renderHeight / 2);
+        context.translate(spritePos.x + this.#spriteWidth * 0.5, spritePos.y + this.#spriteHeight * 0.5);
         context.rotate(renderAngle);
 
-        if(this.animated){
-            let spriteSheetCoords = this.getSpriteSheetCoords();
+        if(this.#animated){
+            let spriteSheetCoords = this.#getSpriteSheetCoords();
 
             context.drawImage(
-                this.image,
+                this.#spriteImg,
                 spriteSheetCoords.x, spriteSheetCoords.y,
-                this.spriteWidth, this.spriteHeight,
-                -this.renderWidth / 2, -this.renderHeight / 2,
-                this.renderWidth, this.renderHeight
+                this.#spriteImgWidth, this.#spriteImgHeight,
+                -this.#spriteWidth * 0.5, -this.#spriteHeight * 0.5,
+                this.#spriteWidth, this.#spriteHeight
             );
         }
         else{
             context.drawImage(
-                this.image,
-                -this.renderWidth / 2, -this.renderHeight / 2,
-                this.renderWidth, this.renderHeight
+                this.#spriteImg,
+                -this.#spriteWidth * 0.5, -this.#spriteHeight * 0.5,
+                this.#spriteWidth, this.#spriteHeight
             );
         }
 
         context.restore();
     }
 
+    // render just image for object circle in UI
+    drawSimple(context, width, height) {
+        let spritePos = {
+            'x': this.#pos.x - width * 0.5,
+            'y': this.#pos.y - height * 0.5
+        }
+
+        if(this.#animated){
+            let spriteSheetCoords = this.#getSpriteSheetCoords();
+
+            context.drawImage(
+                this.#spriteImg,
+                spriteSheetCoords.x, spriteSheetCoords.y,
+                this.#spriteImgWidth, this.#spriteImgHeight,
+                spritePos.x, spritePos.y,
+                width, height
+            );
+        }
+        else{
+            context.drawImage(
+                this.#spriteImg,
+                spritePos.x, spritePos.y,
+                width, height
+            );
+        }
+    }
+
     // update
-    update(){
-        this.lastPos = this.pos;
+    update(frameTime) {
+        this.#lastPos = this.#pos;
 
-        if (this.body){
-            this.pos = physToCanvas(this.body.getPosition(), this.game.getWidth(), this.game.getHeight());
+        if (this.#body){
+            this.#pos = physToCanvas(this.#body.getPosition(), this.#game.width, this.#game.height);
         }
-        else if(this.followPlayer){
-            this.pos = {...this.game.getPlayerPos()};
+        else if(this.#followPlayer){
+            this.#pos = {...this.#game.playerPos};
         }
-    }
-}
+        else if(this.#combining){
+            this.#combinationAccumulator += frameTime;
 
-export class ObjectSize1 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[0], pos);
-        this.setupImg('obj1');
-    }
-}
+            let numFrames = Math.floor(this.#combinationAccumulator / this.#combinationDT);
 
-export class ObjectSize2 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[1], pos);
-        this.setupImg('obj2');
-    }
-}
+            this.#updateCombination(numFrames);
+            this.#combinationAccumulator -= numFrames * this.#combinationDT;
+        }
 
-export class ObjectSize3 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[2], pos);
-        this.setupImg('obj3');
-    }
-}
+        if(this.#animated) {
+            this.#animationAccumulator += frameTime;
 
-export class ObjectSize4 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[3], pos);
-        this.setupImg('obj4');
-    }
-}
+            let numFrames = Math.floor(this.#animationAccumulator / this.#animationDT);
 
-export class ObjectSize5 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[4], pos);
-        this.setupImg('obj5');
-    }
-}
-
-export class ObjectSize6 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[5], pos);
-        this.setupImg('obj6');
-    }
-}
-
-export class ObjectSize7 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[6], pos);
-        this.setupImg('obj7');
-    }
-}
-
-export class ObjectSize8 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[7], pos);
-        this.setupImg('obj8');
-    }
-}
-
-export class ObjectSize9 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[8], pos);
-        this.setupImg('obj9');
-    }
-}
-
-export class ObjectSize10 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[9], pos);
-        this.setupImg('obj10');
-    }
-}
-
-export class ObjectSize11 extends Object{
-    constructor(game, pos){
-        super(game, OBJ_SIZES[10], pos);
-        this.setupImg('obj11', true, OBJ11_SPRITE_WIDTH, OBJ11_SPRITE_HEIGHT, true);
+            this.#updateAnimation(numFrames);
+            this.#animationAccumulator -= numFrames * this.#animationDT;
+        }
     }
 }
