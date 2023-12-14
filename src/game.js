@@ -33,6 +33,9 @@ export default class Game {
     #world = planck.World(GRAVITY);
     #physicsAccumulator = 0;        // accumulator for physics sim
 
+    // audio
+    #popSounds = [];
+
     // object tracking
     #currentObject = null;          // current object that will be dropped
     #nextObject = null;             // next object that will be queued after drop
@@ -168,6 +171,11 @@ export default class Game {
                 if(objA.isCombining || objB.isCombining){
                     return;
                 }
+
+                // play pop sound
+                let pop = new Audio('/jets-game/sound/popJets.mp3');
+                pop.play();
+                this.#popSounds.push(pop);
 
                 let canvasPoint = physToCanvas(contactPoint, this.width, this.height);
 
@@ -329,6 +337,10 @@ export default class Game {
             // remove objects that are done combining
             this.#combiningObjects = this.#combiningObjects.filter((obj) => {
                 return obj.isCombining;
+            })
+
+            this.#popSounds = this.#popSounds.filter((audio) => {
+                return !audio.ended;
             })
 
             // game logic
