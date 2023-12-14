@@ -34,6 +34,7 @@ export default class Game {
     #physicsAccumulator = 0;        // accumulator for physics sim
 
     // audio
+    #BGM;
     #popSounds = [];
 
     // object tracking
@@ -98,6 +99,21 @@ export default class Game {
 
     // initialization
     init() {
+        // start BGM
+        this.#BGM = new Audio("/jets-game/sound/mechPilot.mp3");
+        this.#BGM.loop = true;
+        let playAttempt = setInterval(() => {
+            this.#BGM
+                .play()
+                .then(() => {
+                    clearInterval(playAttempt);
+                    console.log("BGM play");
+                })
+                .catch((err) => {
+                    // console.log(err, ": Unable to play BGM.");
+                });
+        }, 500)
+
         // create container phyics
         this.#container.createBody();
 
