@@ -88,7 +88,7 @@ export default class SoundSystem {
             this.#bgm.track.play()
                 .then(() => {
                     clearInterval(playAttempt);
-                    console.log("BGM play");
+                    console.log("Sound start");
                 })
                 .catch((err) => {
                     // console.log(err, ": Unable to play BGM.");
@@ -138,10 +138,6 @@ export default class SoundSystem {
     
     playPop() {
         let idx = Math.floor(Math.random() * POPS.length);
-
-        console.log("play pop: ", idx)
-
-        console.log(this.#popList[idx])
 
         let popNode = this.#audioContext.createBufferSource();
         popNode.buffer =  this.#popList[idx];
