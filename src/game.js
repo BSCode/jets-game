@@ -148,7 +148,7 @@ export default class Game {
             }   
         })
 
-        const effectVol = document.getElementById('bgm-vol');
+        const effectVol = document.getElementById('effect-vol');
         effectVol.addEventListener('input', (event) => {
             this.#sound.popVolume = event.target.value;
         })

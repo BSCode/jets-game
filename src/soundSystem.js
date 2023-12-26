@@ -54,10 +54,11 @@ export default class SoundSystem {
             this.#bgmVolumeNode.gain.value = this.#bgmVolume;
         }
     }
-    set popVolume(newVal) { this.#popVolume = newVal / 100};
+
+    set popVolume(newVal) { this.#popVolume = newVal / 100; }
 
     // initialize
-    init(){
+    init() {
         // load songs
         BGM_SONGS.forEach((song) => {
             let track = new Audio(song);
@@ -135,7 +136,7 @@ export default class SoundSystem {
         this.#bgm.track.play();
     }
     
-    playPop(){
+    playPop() {
         let idx = Math.floor(Math.random() * POPS.length);
 
         console.log("play pop: ", idx)
