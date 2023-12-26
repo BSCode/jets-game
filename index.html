@@ -13,13 +13,35 @@
     <script src=" https://cdn.jsdelivr.net/npm/planck@1.0.0-beta.16/dist/planck.min.js "></script>
 
     <div id="fullscreen-container" style="touch-action: auto;">
+        <div>
+            <label for="bgm-controls">BGM: </label>
+            <span id="bgm-controls">
+                <select id="bgm-list">
+                    <optgroup label="Jets">
+                        <option value="1" selected="selected">Jets X-mas</option>
+                        <option value="0">Virtual Pilot</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                        <option value="2">Since 2 a.m.</option>
+                    </optgroup>
+                </select>
+                <button id="bgm-mute" class="sound-btn"><i class="fa fa-volume-up"></i></button>
+                <input id="bgm-vol" class="vol-bar" type="range" min="0" max="100" value="25">
+            </span>
+            <label for="effect-controls">Pops:</label>
+            <span id="effect-controls">
+                <button id="effect-mute" class="sound-btn"><i class="fa fa-volume-up"></i> </button>
+                <input id="effect-vol" class="vol-bar" type="range" min="0" max="1000" value="300">
+            </span>
+        </div>
+        <div class="break"></div>
         <canvas id="canvas1"></canvas>
         <button id="reset-btn"><i class="fa fa-refresh"></i> Reset</button>
     </div>
     <button id="fullscreen-btn"><i class="fa fa-arrows-alt"></i> Fullscreen</button>
     <button id="touch-guard-btn"><i class="fa fa-gamepad"></i> Browser Control: ON</button>
 
-    <img id="ui" src="./img/ui.png">
+    <img id="ui" src="./img/ui-xmas.png">
     <img id="gameover" src="./img/Gameover.png">
     <img id="player" src="./img/jetsogey.webp">
     <img id="obj1" src="./img/notlikethispack.webp">

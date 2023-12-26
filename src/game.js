@@ -2,7 +2,9 @@ import UI from './ui.js';
 import Container from './container.js';
 import Player from './player.js';
 import Object from './objects.js';
+import SoundSystem from './soundSystem.js';
 import { canvasToPhys, physToCanvas } from './conversion.js';
+
 
 const GRAVITY = planck.Vec2(0, -10);
 const PHYSICS_DT = 1000 / 240;          // 240 hz
@@ -11,7 +13,7 @@ const DROP_DELAY_SECONDS = 0.5;
 const GAMEOVER_SECONDS = 5;
 
 export default class Game {
-    // singleton tracker
+    // // singleton tracker
     static #instance;
 
     // canvas
@@ -22,6 +24,7 @@ export default class Game {
     #ui;
     #container;
     #player;
+    #sound;
 
     // input values
     #inputPos;                      // current input location: {x: val, y: val}
@@ -32,10 +35,6 @@ export default class Game {
     // physics and update loop
     #world = planck.World(GRAVITY);
     #physicsAccumulator = 0;        // accumulator for physics sim
-
-    // audio
-    #BGM;
-    #popSounds = [];
 
     // object tracking
     #currentObject = null;          // current object that will be dropped
@@ -75,6 +74,7 @@ export default class Game {
         this.#ui = new UI(this);
         this.#container = new Container(this);
         this.#player = new Player(this);
+        this.#sound = new SoundSystem(this);
 
 
         this.#inputPos = {
@@ -99,20 +99,8 @@ export default class Game {
 
     // initialization
     init() {
-        // start BGM
-        this.#BGM = new Audio("/jets-game/sound/mechPilot.mp3");
-        this.#BGM.loop = true;
-        let playAttempt = setInterval(() => {
-            this.#BGM
-                .play()
-                .then(() => {
-                    clearInterval(playAttempt);
-                    console.log("BGM play");
-                })
-                .catch((err) => {
-                    // console.log(err, ": Unable to play BGM.");
-                });
-        }, 500)
+        // start sound system
+        this.#sound.init();
 
         // create container phyics
         this.#container.createBody();
@@ -124,6 +112,46 @@ export default class Game {
         this.#inputHeightScale = rect.height / this.height;
 
         this.#canvasObserver.observe(this.#canvas);
+
+        // setup sound change event listeners
+        const bgmSelect = document.getElementById('bgm-list');
+        bgmSelect.addEventListener('change', (event) => {
+            this.#sound.changeBgm(event.target.value);
+        })
+
+        const bgmBtn = document.getElementById('bgm-mute');
+        bgmBtn.addEventListener('click', () => {
+           this.#sound.toggleBgmMute();
+    
+            if(this.#sound.isBgmMute){
+                bgmBtn.innerHTML = '<i class="fa fa-volume-off"></i>';
+            }
+            else{
+                bgmBtn.innerHTML = '<i class="fa fa-volume-up"></i>';
+            }   
+        })
+
+        const bgmVol = document.getElementById('bgm-vol');
+        bgmVol.addEventListener('input', (event) => {
+            this.#sound.bgmVolume = event.target.value;
+        })
+
+        const effectBtn = document.getElementById('effect-mute');
+        effectBtn.addEventListener('click', () => {
+           this.#sound.togglePopMute();
+    
+            if(this.#sound.isPopMute){
+                effectBtn.innerHTML = '<i class="fa fa-volume-off"></i>';
+            }
+            else{
+                effectBtn.innerHTML = '<i class="fa fa-volume-up"></i>';
+            }   
+        })
+
+        const effectVol = document.getElementById('bgm-vol');
+        effectVol.addEventListener('input', (event) => {
+            this.#sound.popVolume = event.target.value;
+        })
 
         // setup input eventListeners
         this.#canvas.addEventListener('pointermove', (e) => {
@@ -189,9 +217,7 @@ export default class Game {
                 }
 
                 // play pop sound
-                let pop = new Audio('/jets-game/sound/popJets.mp3');
-                pop.play();
-                this.#popSounds.push(pop);
+                this.#sound.playPop();
 
                 let canvasPoint = physToCanvas(contactPoint, this.width, this.height);
 
@@ -353,10 +379,6 @@ export default class Game {
             // remove objects that are done combining
             this.#combiningObjects = this.#combiningObjects.filter((obj) => {
                 return obj.isCombining;
-            })
-
-            this.#popSounds = this.#popSounds.filter((audio) => {
-                return !audio.ended;
             })
 
             // game logic

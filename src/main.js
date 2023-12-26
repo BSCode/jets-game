@@ -40,7 +40,7 @@ window.addEventListener('load', function(){
             tgBtn.innerHTML = '<i class="fa fa-gamepad"></i> Browser Control: ON';
         }
     }
-
+    
     let lastTime = 0;
     function animate(timeStamp){
         let frameTime = timeStamp - lastTime;
