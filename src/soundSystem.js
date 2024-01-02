@@ -26,9 +26,9 @@ export default class SoundSystem {
 
     #bgmList = [];
     #bgmVolumeNode = this.#audioContext.createGain();
-    #currentBgmIdx = 1;
+    #currentBgmIdx = 0;
     #bgm;
-    #bgmVolume = 0.25;
+    #bgmVolume = 0.10;
     #bgmMute = false;
 
     #popList = [];
